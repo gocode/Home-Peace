@@ -1,0 +1,1 @@
+{"name":"chacun-son-tour","version":"1.0.0","private":true,"type":"module","scripts":{"check":"node --check public/app.js && node --check api/push.js && node --check api/config.js","keys":"web-push generate-vapid-keys"},"dependencies":{"web-push":"3.6.7"}}

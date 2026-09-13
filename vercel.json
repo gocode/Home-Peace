@@ -1,0 +1,1 @@
+{"outputDirectory":"public","crons":[{"path":"/api/push?action=daily","schedule":"0 16 * * *"}]}
