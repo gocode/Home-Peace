@@ -5,7 +5,9 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 ## Inclus
 
 - Comptes individuels Supabase, création de famille et invitation par code.
+- Récupération de mot de passe par SMS (code à six chiffres, AllMySMS) ou par lien e-mail, et changement de mot de passe depuis Famille & rappels.
 - Planning jour et semaine visible par tous ; filtre par membre.
+- Lien de partage du planning en lecture seule, sans compte, révocable par un parent.
 - Création, modification et suppression de séries de tâches par le parent.
 - Récurrence par jours de semaine et rotation hebdomadaire entre tous les membres.
 - Validation par la personne assignée ou le parent ; confirmation parentale facultative.
@@ -17,7 +19,7 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 ## Déployer via un dépôt GitHub privé et Vercel
 
 1. Créer un dépôt privé personnel sur GitHub et y déposer le contenu de ce dossier (package.json doit être à la racine). Ne jamais envoyer node_modules, .env ou de clés privées.
-2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor.
+2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, et database/share-link.sql pour le lien de partage.
 3. Dans Supabase Authentication, activer les comptes e-mail/mot de passe. Pour une famille, le plus simple est de créer les utilisateurs depuis Authentication > Users > Add user, avec leur mot de passe et confirmation explicite. Cela évite de dépendre du serveur e-mail de démonstration Supabase, qui ne permet pas l'envoi à tous les destinataires. Pour laisser les utilisateurs s'inscrire depuis l'application et confirmer leur adresse, configurer un SMTP opérationnel. Ne pas désactiver la confirmation uniquement pour contourner cet obstacle.
 4. Sur votre PC, installer Node.js LTS, ouvrir ce dossier dans un terminal et exécuter `npm ci`, puis `npm run keys`. Conserver la paire VAPID ; ne pas la régénérer après activation des téléphones.
 5. Sur Vercel : Add New > Project > importer ce dépôt GitHub. Limiter l'installation GitHub Vercel au dépôt sélectionné. Framework Preset : Other ; Output Directory : public ; pas de commande de build nécessaire ; installation `npm ci`.
@@ -31,14 +33,58 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 | VAPID_PUBLIC_KEY | Clé publique produite par npm run keys |
 | VAPID_PRIVATE_KEY | Clé privée produite par npm run keys |
 | VAPID_SUBJECT | mailto: suivi d'une adresse de contact valide |
+| ALLMYSMS_LOGIN | Identifiant du compte AllMySMS, pour la récupération par SMS |
+| ALLMYSMS_API_KEY | Clé d API AllMySMS (espace client, section API) |
+| ALLMYSMS_FROM | Nom d expéditeur affiché, 11 caractères au plus, déclaré auprès d AllMySMS |
 | CRON_SECRET | Secret aléatoire long, par exemple produit avec `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 
-7. Déployer. Reporter l'URL HTTPS finale dans Supabase Authentication > URL Configuration > Site URL. Si l'inscription par e-mail est utilisée, configurer aussi les URL de redirection autorisées.
+7. Déployer. Reporter l'URL HTTPS finale dans Supabase Authentication > URL Configuration > Site URL. Ajouter cette même URL dans Redirect URLs : la récupération de mot de passe y renvoie l'utilisateur. Si l'inscription par e-mail est utilisée, faire de même pour ses redirections.
 8. Le premier parent se connecte puis crée son profil sans code famille. Il retrouve le code dans Famille & rappels. Les autres se connectent avec leurs comptes respectifs et ce code.
 9. Pour un deuxième parent, changer le rôle de ce membre en `parent` depuis le Table Editor Supabase. Les enfants ne peuvent pas changer leur rôle via l'application.
 10. Installer sur chaque téléphone, activer les notifications et envoyer un test. Sur iPhone : iOS 16.4 minimum, Safari > Partager > Sur l'écran d'accueil, puis ouvrir l'application installée. Sur Android : utiliser un navigateur prenant en charge Web Push.
 
 Après connexion GitHub, chaque modification de la branche de production déclenche un déploiement Vercel. Les variables secrètes restent dans Vercel.
+
+## Mot de passe oublié
+
+### Par SMS, avec AllMySMS
+
+Chaque membre enregistre son mobile dans « Famille & rappels » ; un parent renseigne aussi ceux des enfants. **Ce numéro doit être enregistré avant d'oublier son mot de passe** : sans mobile en base, seul le lien e-mail reste possible. Seuls les mobiles français 06 et 07 sont acceptés, stockés au format international, et un même numéro ne peut pas servir à deux membres.
+
+Depuis l'écran de connexion, « Mot de passe oublié ? » puis « Recevoir plutôt un code par SMS » : la personne saisit son numéro, reçoit un code à six chiffres, puis choisit directement son nouveau mot de passe. Le changement passe par l'API d'administration Supabase côté serveur ; aucune session n'est créée au passage, la personne se reconnecte normalement ensuite.
+
+Garde-fous, tous appliqués côté serveur dans /api/recover et database/sms-recovery.sql :
+
+- Le code vit dix minutes, ne sert qu'une fois, et est effacé après cinq tentatives.
+- Il n'est jamais stocké en clair : seule son empreinte SHA-256 est enregistrée.
+- Un SMS par minute et par personne, cinq par jour et par personne, vingt par jour pour l'ensemble de la base. Ces deux derniers plafonds sont les valeurs par défaut de start_recovery : les relever demande de modifier la fonction.
+- Un numéro inconnu suit exactement le même chemin qu'un numéro connu et reçoit la même réponse : l'endpoint ne permet pas de découvrir qui possède un compte.
+- Les tables recovery_codes et sms_budget n'ont aucune politique de sécurité : elles ne sont atteignables que par les fonctions serveur.
+
+Chaque SMS est facturé par AllMySMS : les plafonds ci-dessus bornent la dépense même si l'endpoint est harcelé. Le nom d'expéditeur (ALLMYSMS_FROM) doit être déclaré dans le compte AllMySMS ; en France les expéditeurs alphanumériques non déclarés sont rejetés par les opérateurs. Le message est transactionnel et ne porte donc pas de mention STOP ; vérifier ce point avec AllMySMS avant l'ouverture à la famille.
+
+### Par e-mail
+
+Depuis l'écran de connexion, « Mot de passe oublié ? » demande à Supabase l'envoi d'un lien. Le lien ouvre l'application avec un jeton temporaire dans l'adresse, l'application affiche le choix d'un nouveau mot de passe, l'enregistre puis connecte la personne. Le jeton est retiré de l'adresse dès l'ouverture et n'est jamais écrit dans l'historique. Un lien expire au bout d'une heure et ne sert qu'une fois ; un lien périmé affiche une invitation à en demander un autre.
+
+Ce parcours dépend entièrement de l'envoi d'e-mails du projet Supabase. Le serveur de démonstration Supabase n'écrit qu'à quelques adresses et limite fortement le débit : sans SMTP opérationnel configuré (Authentication > Emails), la famille ne recevra rien. Supabase limite aussi le nombre de demandes par adresse ; l'application affiche alors le délai d'attente renvoyé par le service.
+
+La réponse est volontairement identique qu'un compte existe ou non à cette adresse, pour ne pas révéler qui possède un compte. Le changement de mot de passe depuis Famille & rappels s'adresse aux personnes déjà connectées et ne nécessite pas d'e-mail.
+
+## Partager le planning
+
+Depuis « Famille & rappels », un parent crée un lien de partage. Ce lien ouvre /planning.html : le planning de la semaine en lecture seule, sans compte, sans réglages, sans bouton de validation. Les flèches parcourent les semaines dans une fenêtre d'environ un an autour d'aujourd'hui.
+
+La réponse publique ne contient aucun identifiant technique : ni identifiant de compte, ni identifiant de tâche, ni numéro de mobile, ni code d'invitation. Uniquement des prénoms, des couleurs, des titres de tâches et leur état.
+
+Ce jeton reste un secret porté par l'adresse, avec ce que cela implique :
+
+- toute personne qui reçoit le lien voit les prénoms de la famille et le rythme de la maison ;
+- un lien transféré reste valable, y compris hors de la famille ;
+- la page est servie en noindex, nofollow et sans référent, ce qui la tient à l'écart des moteurs de recherche et évite d'en divulguer l'adresse aux sites tiers — cela ne remplace pas la prudence au moment de le transmettre ;
+- /api/planning lit la base avec la clé de service et n'écrit jamais, mais n'a pas de limitation de débit propre : un lien divulgué peut être interrogé en boucle par qui le détient.
+
+Un parent renouvelle le lien à tout moment, ce qui rend l'ancien inutilisable sur-le-champ, ou désactive complètement le partage.
 
 ## Rappels et gratuité
 
@@ -55,7 +101,7 @@ Sources :
 
 ## Contrôle avant ouverture à la famille
 
-Tester deux comptes dans des navigateurs séparés : visibilité commune, validation d'une tâche assignée, refus d'une tâche d'autrui pour un enfant, refus de modification des séries pour un enfant. Tester aussi une deuxième famille : aucune donnée ne doit être accessible entre familles. Tester enfin les notifications Android et iPhone avec l'application fermée, puis vérifier le premier cron dans les journaux Vercel. Ces tests réels nécessitent les comptes et services connectés ; ils ne sont pas remplacés par la démonstration.
+Tester le lien de partage dans un navigateur sans session : le planning doit s'afficher sans aucune action possible, puis le renouvellement depuis l'application doit rendre l'ancien lien inopérant. Tester la récupération par SMS sur un vrai mobile : enregistrement du numéro, demande de code, changement, reconnexion, puis rejeu du même code qui doit être refusé. Tester aussi la récupération par e-mail de bout en bout avec une vraie adresse : demande du lien, réception, choix du mot de passe, connexion, puis réutilisation du même lien qui doit être refusée. Tester deux comptes dans des navigateurs séparés : visibilité commune, validation d'une tâche assignée, refus d'une tâche d'autrui pour un enfant, refus de modification des séries pour un enfant. Tester aussi une deuxième famille : aucune donnée ne doit être accessible entre familles. Tester enfin les notifications Android et iPhone avec l'application fermée, puis vérifier le premier cron dans les journaux Vercel. Ces tests réels nécessitent les comptes et services connectés ; ils ne sont pas remplacés par la démonstration.
 
 Les tables utilisent la sécurité par ligne Supabase. Les fonctions d'écriture de validation vérifient l'appartenance au foyer et la personne assignée. Les clés service_role et VAPID_PRIVATE_KEY ne sont jamais exposées par /api/config. Les sessions sont conservées dans le stockage du navigateur : utiliser un téléphone personnel et se déconnecter des appareils partagés. L'installation des notifications rattache cet appareil au compte qui les active.
 
