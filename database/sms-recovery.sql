@@ -1,10 +1,15 @@
--- Exécuter une fois dans le SQL Editor Supabase, après database/setup.sql.
+-- Exécuter dans le SQL Editor Supabase, après database/setup.sql.
+-- Rejouable : relancer ce fichier en entier ne produit aucune erreur.
 -- Récupération de mot de passe par SMS : mobile par membre, codes à usage unique, garde-fous de dépense.
-alter table public.members add column phone text;
-alter table public.members add constraint members_phone_format check(phone is null or phone ~ '^33[67][0-9]{8}$');
-create unique index members_phone_unique on public.members(phone) where phone is not null;
+alter table public.members add column if not exists phone text;
+do $$ begin
+ if not exists(select 1 from pg_constraint where conname='members_phone_format') then
+  alter table public.members add constraint members_phone_format check(phone is null or phone ~ '^33[67][0-9]{8}$');
+ end if;
+end $$;
+create unique index if not exists members_phone_unique on public.members(phone) where phone is not null;
 -- Chacun renseigne son mobile ; un parent renseigne aussi celui des enfants de son foyer.
-create function public.set_phone(target uuid, mobile text) returns void language plpgsql security definer set search_path=public as $$
+create or replace function public.set_phone(target uuid, mobile text) returns void language plpgsql security definer set search_path=public as $$
 begin
  if auth.uid() is null then raise exception 'Connexion requise'; end if;
  if mobile is not null and mobile !~ '^33[67][0-9]{8}$' then raise exception 'Numéro de mobile français attendu'; end if;
@@ -16,15 +21,15 @@ end $$;
 revoke all on function public.set_phone(uuid,text) from public;
 grant execute on function public.set_phone(uuid,text) to authenticated;
 -- Un seul code vivant par personne. Le code n'est jamais stocké en clair.
-create table public.recovery_codes(user_id uuid primary key references public.members on delete cascade, code_hash text not null, expires_at timestamptz not null, attempts integer not null default 0, sent_at timestamptz not null default now(), sent_day date not null, sent_count integer not null default 1);
-create table public.sms_budget(day date primary key, count integer not null default 0);
+create table if not exists public.recovery_codes(user_id uuid primary key references public.members on delete cascade, code_hash text not null, expires_at timestamptz not null, attempts integer not null default 0, sent_at timestamptz not null default now(), sent_day date not null, sent_count integer not null default 1);
+create table if not exists public.sms_budget(day date primary key, count integer not null default 0);
 alter table public.recovery_codes enable row level security;
 alter table public.sms_budget enable row level security;
 -- Aucune politique : ces deux tables ne sont atteignables que par les fonctions serveur (clé service_role).
 revoke all on public.recovery_codes from anon, authenticated;
 revoke all on public.sms_budget from anon, authenticated;
 -- Demande de code : au plus un SMS par minute et par personne, per_user_cap par jour, daily_cap pour toute la base.
-create function public.start_recovery(target uuid, hash text, daily_cap integer default 20, per_user_cap integer default 5) returns text language plpgsql security definer set search_path=public as $$
+create or replace function public.start_recovery(target uuid, hash text, daily_cap integer default 20, per_user_cap integer default 5) returns text language plpgsql security definer set search_path=public as $$
 declare r public.recovery_codes; today date:=(now() at time zone 'Europe/Paris')::date;
 begin
  perform pg_advisory_xact_lock(hashtext('recovery:'||target::text));
@@ -38,8 +43,8 @@ begin
    sent_count=case when recovery_codes.sent_day=today then recovery_codes.sent_count+1 else 1 end;
  return 'ok';
 end $$;
--- Vérification : le code est consommé au premier succès, et abandonné après 5 essais.
-create function public.check_recovery(target uuid, hash text) returns text language plpgsql security definer set search_path=public as $$
+-- Vérification : le code est consommé au premier succès, et abandonné après cinq essais.
+create or replace function public.check_recovery(target uuid, hash text) returns text language plpgsql security definer set search_path=public as $$
 declare r public.recovery_codes;
 begin
  select * into r from recovery_codes where user_id=target for update;
@@ -51,3 +56,10 @@ begin
 end $$;
 revoke all on function public.start_recovery(uuid,text,integer,integer),public.check_recovery(uuid,text) from public;
 grant execute on function public.start_recovery(uuid,text,integer,integer),public.check_recovery(uuid,text) to service_role;
+-- Contrôle : les six lignes ci-dessous doivent toutes afficher « en place ».
+select 'colonne members.phone' as objet, case when exists(select 1 from information_schema.columns where table_schema='public' and table_name='members' and column_name='phone') then 'en place' else 'MANQUANT' end as etat
+union all select 'index members_phone_unique', case when exists(select 1 from pg_indexes where schemaname='public' and indexname='members_phone_unique') then 'en place' else 'MANQUANT' end
+union all select 'table recovery_codes', case when exists(select 1 from pg_tables where schemaname='public' and tablename='recovery_codes' and rowsecurity) then 'en place' else 'MANQUANT' end
+union all select 'table sms_budget', case when exists(select 1 from pg_tables where schemaname='public' and tablename='sms_budget' and rowsecurity) then 'en place' else 'MANQUANT' end
+union all select 'fonction set_phone', case when exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='set_phone') then 'en place' else 'MANQUANT' end
+union all select 'fonctions de code', case when (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('start_recovery','check_recovery'))=2 then 'en place' else 'MANQUANT' end;
