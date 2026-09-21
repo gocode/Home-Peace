@@ -1,1 +1,1 @@
-export default function handler(req,res){res.setHeader('Cache-Control','no-store');res.json({url:process.env.SUPABASE_URL||'',key:process.env.SUPABASE_ANON_KEY||'',vapid:process.env.VAPID_PUBLIC_KEY||''});}
+export default function handler(req,res){res.setHeader('Cache-Control','no-store');res.json({url:process.env.SUPABASE_URL||'',key:process.env.SUPABASE_ANON_KEY||'',vapid:process.env.VAPID_PUBLIC_KEY||'',sms:!!(process.env.ALLMYSMS_LOGIN&&process.env.ALLMYSMS_API_KEY&&process.env.ALLMYSMS_FROM)});}
