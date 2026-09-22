@@ -18,7 +18,7 @@ begin
  if not found then raise exception 'Membre introuvable'; end if;
 exception when unique_violation then raise exception 'Ce numéro est déjà enregistré pour un autre membre';
 end $$;
-revoke all on function public.set_phone(uuid,text) from public;
+revoke all on function public.set_phone(uuid,text) from public, anon;
 grant execute on function public.set_phone(uuid,text) to authenticated;
 -- Un seul code vivant par personne. Le code n'est jamais stocké en clair.
 create table if not exists public.recovery_codes(user_id uuid primary key references public.members on delete cascade, code_hash text not null, expires_at timestamptz not null, attempts integer not null default 0, sent_at timestamptz not null default now(), sent_day date not null, sent_count integer not null default 1);
@@ -54,7 +54,7 @@ begin
  if r.code_hash<>hash then update recovery_codes set attempts=attempts+1 where user_id=target; return 'faux'; end if;
  delete from recovery_codes where user_id=target; return 'ok';
 end $$;
-revoke all on function public.start_recovery(uuid,text,integer,integer),public.check_recovery(uuid,text) from public;
+revoke all on function public.start_recovery(uuid,text,integer,integer),public.check_recovery(uuid,text) from public, anon, authenticated;
 grant execute on function public.start_recovery(uuid,text,integer,integer),public.check_recovery(uuid,text) to service_role;
 -- Contrôle : les six lignes ci-dessous doivent toutes afficher « en place ».
 select 'colonne members.phone' as objet, case when exists(select 1 from information_schema.columns where table_schema='public' and table_name='members' and column_name='phone') then 'en place' else 'MANQUANT' end as etat
@@ -62,4 +62,5 @@ union all select 'index members_phone_unique', case when exists(select 1 from pg
 union all select 'table recovery_codes', case when exists(select 1 from pg_tables where schemaname='public' and tablename='recovery_codes' and rowsecurity) then 'en place' else 'MANQUANT' end
 union all select 'table sms_budget', case when exists(select 1 from pg_tables where schemaname='public' and tablename='sms_budget' and rowsecurity) then 'en place' else 'MANQUANT' end
 union all select 'fonction set_phone', case when exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='set_phone') then 'en place' else 'MANQUANT' end
-union all select 'fonctions de code', case when (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('start_recovery','check_recovery'))=2 then 'en place' else 'MANQUANT' end;
+union all select 'fonctions de code', case when (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('start_recovery','check_recovery'))=2 then 'en place' else 'MANQUANT' end
+union all select 'fonctions de code hors de portée des clients', case when not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('start_recovery','check_recovery') and (has_function_privilege('anon',p.oid,'execute') or has_function_privilege('authenticated',p.oid,'execute'))) then 'en place' else 'MANQUANT' end;
