@@ -11,7 +11,7 @@ begin
  update homes set share=case when enabled then gen_random_uuid() else null end where id=public.my_home() returning share into v;
  return v;
 end $$;
-revoke all on function public.set_share(boolean) from public;
+revoke all on function public.set_share(boolean) from public, anon;
 grant execute on function public.set_share(boolean) to authenticated;
 -- Contrôle : les trois lignes ci-dessous doivent toutes afficher « en place ».
 select 'colonne homes.share' as objet, case when exists(select 1 from information_schema.columns where table_schema='public' and table_name='homes' and column_name='share') then 'en place' else 'MANQUANT' end as etat
