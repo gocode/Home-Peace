@@ -26,7 +26,7 @@ export default async function handler(req,res){
  if(req.method!=='POST'||!['subscribe','test'].includes(action))return res.status(405).json({error:'Requête invalide'});
  const auth=await fetch(env.SUPABASE_URL+'/auth/v1/user',{headers:{apikey:env.SUPABASE_SERVICE_ROLE_KEY,Authorization:req.headers.authorization||''}});
  if(!auth.ok)return res.status(401).json({error:'Connexion requise'});const user=await auth.json();
- const member=await db('members?id=eq.'+encodeURIComponent(user.id));if(!member.length)return res.status(403).json({error:'Rejoins une famille avant de continuer.'});
+ const member=await db('members?select=id&account=eq.'+encodeURIComponent(user.id));if(!member.length)return res.status(403).json({error:'Rejoins une famille avant de continuer.'});const me=member[0].id;
  if(action==='subscribe'){
   const sub=req.body;if(!sub||JSON.stringify(sub).length>8192)return res.status(400).json({error:'Abonnement invalide'});
   let u;try{u=new URL(sub.endpoint)}catch{return res.status(400).json({error:'Adresse de notification invalide'})}
@@ -34,13 +34,13 @@ export default async function handler(req,res){
   if(u.protocol!=='https:'||u.port||u.username||u.password||!allowed||!sub.keys?.p256dh||!sub.keys?.auth)return res.status(400).json({error:'Service de notification non pris en charge'});
   // Un appareil peut être réattribué à son nouveau compte lors de son activation explicite.
   const existing=await db('push_subscriptions?endpoint=eq.'+encodeURIComponent(sub.endpoint));
-  if(existing.length)await db('push_subscriptions?endpoint=eq.'+encodeURIComponent(sub.endpoint),'PATCH',{user_id:user.id,subscription:sub});
-  else await db('push_subscriptions','POST',{endpoint:sub.endpoint,user_id:user.id,subscription:sub});
+  if(existing.length)await db('push_subscriptions?endpoint=eq.'+encodeURIComponent(sub.endpoint),'PATCH',{user_id:me,subscription:sub});
+  else await db('push_subscriptions','POST',{endpoint:sub.endpoint,user_id:me,subscription:sub});
   return res.json({ok:true});
  }
- const devices=await db('push_subscriptions?user_id=eq.'+user.id);if(!devices.length)return res.status(400).json({error:"Active d'abord les notifications."});
+ const devices=await db('push_subscriptions?user_id=eq.'+me);if(!devices.length)return res.status(400).json({error:"Active d'abord les notifications."});
  // Un test par minute et par compte.
- try{await db('push_tests','POST',{user_id:user.id,minute:new Date().toISOString().slice(0,16)})}catch(e){if(e.status===409)return res.status(429).json({error:'Attends une minute avant un nouveau test.'});throw e}
+ try{await db('push_tests','POST',{user_id:me,minute:new Date().toISOString().slice(0,16)})}catch(e){if(e.status===409)return res.status(429).json({error:'Attends une minute avant un nouveau test.'});throw e}
  const result=await Promise.all(devices.map(s=>send(s,{title:'Les rappels sont prêts !',body:'Ce téléphone peut recevoir les rappels de la famille.',tag:'test'})));
  if(!result.some(Boolean))return res.status(400).json({error:'Réactive les notifications sur ce téléphone.'});res.json({ok:true});
  }catch(e){console.error('push failure',e.status||e.statusCode||'unknown');res.status(500).json({error:"L'envoi a échoué. Réessaie dans un instant."})}
