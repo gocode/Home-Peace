@@ -20,11 +20,11 @@ export default async function handler(req,res){
  if(!phone)return res.status(400).json({error:'Numéro de mobile français attendu, par exemple 06 12 34 56 78.'});
  try{
   // Un numéro inconnu suit exactement le même chemin qu'un numéro connu : la réponse ne dit jamais qui possède un compte.
-  const [member]=await db('members?select=id,name&phone=eq.'+phone);
+  const [member]=await db('members?select=id,name,account&phone=eq.'+phone);const holder=member?.account?member:null;
   if(action==='send'){
-   if(member){
+   if(holder){
     const code=String(randomInt(0,1000000)).padStart(6,'0');
-    const state=await db('rpc/start_recovery','POST',{target:member.id,hash:fingerprint(member.id,code)});
+    const state=await db('rpc/start_recovery','POST',{target:holder.id,hash:fingerprint(holder.id,code)});
     if(state==='ok'){try{await sms(phone,`${code} est votre code pour choisir un nouveau mot de passe sur A chacun son tour. Valable 10 minutes.`)}catch(e){console.error('allmysms',e.detail||'echec')}}
     else console.warn('code non envoyé',state);
    }
@@ -33,9 +33,9 @@ export default async function handler(req,res){
   const code=digits(req.body?.code),password=String(req.body?.password??'');
   if(!/^\d{6}$/.test(code))return res.status(400).json({error:'Le code compte six chiffres.'});
   if(password.length<10)return res.status(400).json({error:"Choisis un mot de passe d'au moins 10 caractères."});
-  const state=member?await db('rpc/check_recovery','POST',{target:member.id,hash:fingerprint(member.id,code)}):'absent';
+  const state=holder?await db('rpc/check_recovery','POST',{target:holder.id,hash:fingerprint(holder.id,code)}):'absent';
   if(state!=='ok')return res.status(400).json({error:{expire:'Ce code a expiré. Demande-en un nouveau.',bloque:'Trop de tentatives. Demande un nouveau code.',absent:'Demande d’abord un code par SMS.'}[state]||'Code incorrect.'});
-  const r=await fetch(env.SUPABASE_URL+'/auth/v1/admin/users/'+member.id,{method:'PUT',headers:key,body:JSON.stringify({password})});
+  const r=await fetch(env.SUPABASE_URL+'/auth/v1/admin/users/'+holder.account,{method:'PUT',headers:key,body:JSON.stringify({password})});
   if(!r.ok){console.error('admin password',r.status);return res.status(400).json({error:'Mot de passe refusé. Choisis-en un autre.'})}
   res.json({ok:true});
  }catch(e){console.error('recover failure',e.status||'unknown');res.status(500).json({error:'Service indisponible. Réessaie dans un instant.'})}

@@ -7,6 +7,8 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 - Comptes individuels Supabase, création de famille et invitation par code.
 - Récupération de mot de passe par SMS (code à six chiffres, AllMySMS) ou par lien e-mail, et changement de mot de passe depuis Famille & rappels.
 - Planning jour et semaine visible par tous ; filtre par membre.
+- Profils d'enfants gérés par un parent, sans compte ni adresse e-mail.
+- Lien personnel par enfant, pour consulter ses tâches et les déclarer faites sans compte.
 - Lien de partage du planning en lecture seule, sans compte, révocable par un parent.
 - Création, modification et suppression de séries de tâches par le parent.
 - Récurrence par jours de semaine et rotation hebdomadaire entre tous les membres.
@@ -19,7 +21,7 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 ## Déployer via un dépôt GitHub privé et Vercel
 
 1. Créer un dépôt privé personnel sur GitHub et y déposer le contenu de ce dossier (package.json doit être à la racine). Ne jamais envoyer node_modules, .env ou de clés privées.
-2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, et database/share-link.sql pour le lien de partage.
+2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, database/share-link.sql pour le lien de partage, puis database/managed-profiles.sql pour les profils gérés.
 3. Dans Supabase Authentication, activer les comptes e-mail/mot de passe. Pour une famille, le plus simple est de créer les utilisateurs depuis Authentication > Users > Add user, avec leur mot de passe et confirmation explicite. Cela évite de dépendre du serveur e-mail de démonstration Supabase, qui ne permet pas l'envoi à tous les destinataires. Pour laisser les utilisateurs s'inscrire depuis l'application et confirmer leur adresse, configurer un SMTP opérationnel. Ne pas désactiver la confirmation uniquement pour contourner cet obstacle.
 4. Sur votre PC, installer Node.js LTS, ouvrir ce dossier dans un terminal et exécuter `npm ci`, puis `npm run keys`. Conserver la paire VAPID ; ne pas la régénérer après activation des téléphones.
 5. Sur Vercel : Add New > Project > importer ce dépôt GitHub. Limiter l'installation GitHub Vercel au dépôt sélectionné. Framework Preset : Other ; Output Directory : public ; pas de commande de build nécessaire ; installation `npm ci`.
@@ -71,6 +73,26 @@ Ce parcours dépend entièrement de l'envoi d'e-mails du projet Supabase. Le ser
 
 La réponse est volontairement identique qu'un compte existe ou non à cette adresse, pour ne pas révéler qui possède un compte. Le changement de mot de passe depuis Famille & rappels s'adresse aux personnes déjà connectées et ne nécessite pas d'e-mail.
 
+## Les profils de la famille
+
+Deux sortes de profils coexistent.
+
+Un **profil avec compte** appartient à son titulaire : il se connecte avec son adresse et son mot de passe, et l'application ne permet à personne de le supprimer ni de lui fabriquer un lien d'accès. C'est le cas des parents, et des enfants assez grands pour avoir une adresse.
+
+Un **profil géré** est créé par un parent depuis « Famille & rappels », d'un prénom et rien d'autre. Il n'a ni compte, ni mot de passe, ni adresse e-mail, donc rien à récupérer par SMS non plus. Un parent le renomme ou le supprime, à condition qu'aucune tâche ne lui soit encore attribuée.
+
+Techniquement, un membre n'est plus identifié par son compte : la colonne members.account rattache un compte à un profil, et reste vide pour les profils gérés. Les profils créés avant cette évolution gardent leur identifiant, rien n'est à reprendre.
+
+## Le lien personnel d'un enfant
+
+Pour un profil géré, un parent produit un lien personnel. L'enfant l'ouvre sans compte et y trouve **ses** tâches, celles des autres lui restant invisibles, et il peut déclarer une tâche faite ou revenir sur sa déclaration.
+
+Ce que ce lien ne permet pas, et c'est délibéré : cocher la tâche de quelqu'un d'autre, agir sur une tâche prévue plus tard, confirmer une tâche à la place d'un parent, défaire une confirmation parentale, voir les réglages, ou atteindre quoi que ce soit d'un autre foyer. Le serveur revérifie chacun de ces points à chaque requête, dans la fonction mark_task_as que seule la clé de service peut appeler.
+
+Ce lien reste un secret porté par l'adresse : qui le détient peut cocher à la place de l'enfant. Dans une famille c'est sans gravité, la confirmation parentale existant précisément pour les tâches qui comptent. Un parent renouvelle le lien, ce qui invalide l'ancien sur-le-champ, ou le retire complètement.
+
+Un profil rattaché à un compte ne peut pas recevoir de lien personnel : ce serait contourner son mot de passe.
+
 ## Partager le planning
 
 Depuis « Famille & rappels », un parent crée un lien de partage. Ce lien ouvre /planning.html : le planning de la semaine en lecture seule, sans compte, sans réglages, sans bouton de validation. Les flèches parcourent les semaines dans une fenêtre d'environ un an autour d'aujourd'hui.
@@ -101,7 +123,7 @@ Sources :
 
 ## Contrôle avant ouverture à la famille
 
-Tester le lien de partage dans un navigateur sans session : le planning doit s'afficher sans aucune action possible, puis le renouvellement depuis l'application doit rendre l'ancien lien inopérant. Tester la récupération par SMS sur un vrai mobile : enregistrement du numéro, demande de code, changement, reconnexion, puis rejeu du même code qui doit être refusé. Tester aussi la récupération par e-mail de bout en bout avec une vraie adresse : demande du lien, réception, choix du mot de passe, connexion, puis réutilisation du même lien qui doit être refusée. Tester deux comptes dans des navigateurs séparés : visibilité commune, validation d'une tâche assignée, refus d'une tâche d'autrui pour un enfant, refus de modification des séries pour un enfant. Tester aussi une deuxième famille : aucune donnée ne doit être accessible entre familles. Tester enfin les notifications Android et iPhone avec l'application fermée, puis vérifier le premier cron dans les journaux Vercel. Ces tests réels nécessitent les comptes et services connectés ; ils ne sont pas remplacés par la démonstration.
+Tester un profil géré et son lien personnel : création depuis un compte parent, ouverture du lien dans un navigateur sans session, validation d'une tâche, puis vérification qu'une tâche attribuée à quelqu'un d'autre reste hors d'atteinte. Tester le lien de partage du foyer dans un navigateur sans session : le planning doit s'afficher sans aucune action possible, puis le renouvellement depuis l'application doit rendre l'ancien lien inopérant. Tester la récupération par SMS sur un vrai mobile : enregistrement du numéro, demande de code, changement, reconnexion, puis rejeu du même code qui doit être refusé. Tester aussi la récupération par e-mail de bout en bout avec une vraie adresse : demande du lien, réception, choix du mot de passe, connexion, puis réutilisation du même lien qui doit être refusée. Tester deux comptes dans des navigateurs séparés : visibilité commune, validation d'une tâche assignée, refus d'une tâche d'autrui pour un enfant, refus de modification des séries pour un enfant. Tester aussi une deuxième famille : aucune donnée ne doit être accessible entre familles. Tester enfin les notifications Android et iPhone avec l'application fermée, puis vérifier le premier cron dans les journaux Vercel. Ces tests réels nécessitent les comptes et services connectés ; ils ne sont pas remplacés par la démonstration.
 
 Les tables utilisent la sécurité par ligne Supabase. Les fonctions d'écriture de validation vérifient l'appartenance au foyer et la personne assignée. Les clés service_role et VAPID_PRIVATE_KEY ne sont jamais exposées par /api/config. Les sessions sont conservées dans le stockage du navigateur : utiliser un téléphone personnel et se déconnecter des appareils partagés. L'installation des notifications rattache cet appareil au compte qui les active.
 
