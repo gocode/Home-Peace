@@ -141,6 +141,22 @@ span.check{border-style:dashed;opacity:.7}
 .task.done .check{background:var(--ok);border-color:var(--ok);color:#fff;border-style:solid;opacity:1}
 .task.pending .check{background:var(--warn-soft);border-color:#e0a546;color:var(--warn);border-style:solid;opacity:1}
 .task.pending .check .ico{stroke-width:2}
+.pop{animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.flame{display:inline-flex;align-items:center;gap:2px;flex:none;font-size:12px;font-weight:700;line-height:1;color:#a8460b;background:#fff1e0;border:1px solid #ffd4a8;border-radius:30px;padding:3px 7px;white-space:nowrap;vertical-align:middle}
+.flame.big{font-size:.5em;padding:4px 9px;letter-spacing:0;position:relative;top:-.12em}
+.confetti{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:40}
+@media(prefers-reduced-motion:reduce){.pop{animation:none}}
+.medal{font-size:20px;line-height:1;flex:none}
+.dayhead .medal{margin-right:auto}
+.sday{position:relative}
+.smedal{position:absolute;top:-7px;right:-5px;font-style:normal;font-size:15px;line-height:1}
+.trophy{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#fff7dc,#ffe7a6);border:1px solid #efc350;color:#5f4300;border-radius:14px;padding:12px 16px;margin:0 0 14px}
+.trophy .cup{font-size:34px;line-height:1}
+.trophy strong{display:block;font-size:17px}
+.trophy span{font-size:14px}
+.awards{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+.awards span{font-size:13px;font-weight:600;color:#5f4300;background:#fff7dc;border:1px solid #f3d27d;border-radius:30px;padding:3px 9px}
 .acts{display:flex;gap:8px}
 .acts .icon{width:38px;min-height:38px;border-color:transparent;background:transparent;color:var(--muted)}
 .acts .icon:not(:disabled):hover{background:#eef2f9;color:var(--ink)}

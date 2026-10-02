@@ -1,6 +1,6 @@
 // Planning ouvert par un lien de partage : sans compte, sans réglages.
 // Un lien de foyer donne la semaine entière en lecture seule ; un lien de membre ne montre que ses tâches et le laisse les cocher.
-import {pushReady,announce} from './_notify.js';
+import {pushReady,announce,streaksOf,awardsOf,complete,won} from './_notify.js';
 const iso=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(d);
 const at=s=>new Date(s+'T12:00:00Z');
 const add=(s,n)=>{const d=at(s);d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
@@ -30,26 +30,28 @@ export default async function handler(req,res){
    const state=await db('rpc/mark_task_as','POST',{actor_member:owner.id,task_id:task,task_day:day,action});
    if(state!=='ok')return res.status(400).json({error:{tache:'Cette tâche n’existe plus.',date:'Cette tâche n’est pas prévue ce jour-là.',futur:'Cette tâche est prévue plus tard.',autre:'Cette tâche est attribuée à quelqu’un d’autre.'}[state]||'Action impossible.'});
    // Une tâche soumise à confirmation prévient les parents ; un échec d'envoi ne remet pas la validation en cause.
-   if(action==='done'&&pushReady(env))await announce(env,'done',{actor:owner,task,day}).catch(e=>console.error('notify failure',e.status||e.statusCode||'unknown'));
+   if(action==='done'&&pushReady(env))for(const kind of ['done','medal'])await announce(env,kind,{actor:owner,task,day}).catch(e=>console.error('notify failure',e.status||e.statusCode||'unknown'));
    return res.json({ok:true});
   }
 
   let asked=String(req.query.week??today);
   if(!jour.test(asked)||Number.isNaN(Date.parse(asked))||Math.abs(Date.parse(asked)-Date.parse(today))>400*86400000)asked=today;
   const start=add(asked,1-weekday(asked)),days=Array.from({length:7},(_,i)=>add(start,i));
-  const [members,tasks,done,[maison]]=await Promise.all([
+  const [members,tasks,done,[maison],series,vitrine]=await Promise.all([
    db('members?select=*&home=eq.'+foyer),
    db('tasks?select=*&home=eq.'+foyer),
    db('completions?select=task,day,approved&day=gte.'+start+'&day=lte.'+days[6]),
-   home?[home]:db('homes?select=name&id=eq.'+foyer)]);
+   home?[home]:db('homes?select=name&id=eq.'+foyer),
+   streaksOf(db,foyer),awardsOf(db,foyer)]);
   const ours=new Set(tasks.map(t=>t.id));
   const person=(t,d)=>{const w=Math.floor((Date.parse(d)-Date.parse(t.starts))/604800000),i=t.rotating?((w%t.people.length)+t.people.length)%t.people.length:0;return members.find(m=>m.id===t.people[i])};
   const occurs=(t,d)=>d>=t.starts&&(!t.ends||d<=t.ends)&&t.days.includes(weekday(d));
   const marks=done.filter(c=>ours.has(c.task));
-  res.json({home:maison?.name??'',today,start,
-   who:owner?owner.name:null,color:owner?owner.color:null,
-   people:owner?[{name:owner.name,color:owner.color}]:members.filter(m=>m.assignable!==false||tasks.some(t=>t.people.includes(m.id))).map(m=>({name:m.name,color:m.color})),
-   days:days.map(d=>({day:d,tasks:tasks.filter(t=>occurs(t,d)&&(!owner||person(t,d)?.id===owner.id)).map(t=>{const m=person(t,d),c=marks.find(c=>c.task===t.id&&c.day===d);
+  // Médaille du jour et coupe de la semaine : toujours sur toute la famille, même pour un lien personnel.
+  res.json({home:maison?.name??'',today,start,trophy:won(tasks,marks,days),awards:vitrine,
+   who:owner?owner.name:null,color:owner?owner.color:null,streak:owner?series[owner.id]||0:null,
+   people:owner?[{name:owner.name,color:owner.color}]:members.filter(m=>m.assignable!==false||tasks.some(t=>t.people.includes(m.id))).map(m=>({name:m.name,color:m.color,streak:series[m.id]||0})),
+   days:days.map(d=>({day:d,medal:complete(tasks,marks,d),tasks:tasks.filter(t=>occurs(t,d)&&(!owner||person(t,d)?.id===owner.id)).map(t=>{const m=person(t,d),c=marks.find(c=>c.task===t.id&&c.day===d);
     // L'identifiant de tâche n'est livré qu'au titulaire du lien, qui a justement le droit d'agir dessus.
     return {...(owner?{id:t.id}:{}),title:t.title,who:m?.name??null,color:m?.color??null,rotating:!!t.rotating,
      state:c?.approved?'fait':c?'attente':d<today?'retard':'prevu',
