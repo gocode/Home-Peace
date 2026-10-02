@@ -1,11 +1,13 @@
 // Petites célébrations, partagées par l'application et la page du lien personnel : confettis, vibration, flamme de série.
-// Avec « réduire les animations » activé sur l'appareil, seule la vibration reste.
+// Avec « réduire les animations » activé sur l'appareil, restent la vibration et le son.
+import {popSound} from '/sound.js';
 const calm=matchMedia('(prefers-reduced-motion: reduce)');
 const palette=['#ff5d5d','#ffb703','#3ccf91','#4169e1','#ae368a','#ff8fab','#7bdff2'];
 
 // Petite gerbe depuis le rond coché ; grande pluie quand la journée est bouclée.
 export function confetti(from,big=false){
  try{navigator.vibrate?.(big?[30,60,30,60,90]:30)}catch{}
+ popSound(big);
  if(calm.matches)return;
  const W=innerWidth,H=innerHeight,dpr=Math.min(devicePixelRatio||1,2),c=document.createElement('canvas');
  c.className='confetti';c.setAttribute('aria-hidden','true');c.width=W*dpr;c.height=H*dpr;

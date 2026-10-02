@@ -1,6 +1,7 @@
 import {deviceState,enableDevice,alertHtml} from '/notify.js';
 import {icon} from '/icons.js';
 import {confetti,pop,bounce,flame,cheer,medal,smallMedal,trophy,showcase,teamCheer} from '/fun.js';
+import {unlock,success,soundToggle} from '/sound.js';
 const $=s=>document.querySelector(s), app=$('#app');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const iso=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(d);
@@ -30,14 +31,14 @@ async function load(week){
  try{const r=await fetch('/api/planning?token='+encodeURIComponent(token)+(week?'&week='+week:''));const d=await r.json().catch(()=>null);if(!r.ok)throw Error(d?.error||'Planning indisponible.');const first=!vue;vue=d;render(d);if(first)checkPush()}
  catch(e){fail('Planning indisponible',e.message,'Ce lien a pu être renouvelé ou désactivé par la famille. Demande-leur le lien à jour.')}}
 // Cocher se fête : petite gerbe, ou grande pluie quand c'était la dernière tâche du jour.
-async function mark(b){b.disabled=true;const {task,day}=b.dataset,act=b.dataset.do,from=b.getBoundingClientRect(),before=vue.streak||0,hadMedal=!!vue.days.find(x=>x.day===day)?.medal,hadCup=!!vue.trophy;
+async function mark(b){b.disabled=true;unlock();const {task,day}=b.dataset,act=b.dataset.do,from=b.getBoundingClientRect(),before=vue.streak||0,hadMedal=!!vue.days.find(x=>x.day===day)?.medal,hadCup=!!vue.trophy;
  const last=act==='done'&&vue.days.find(x=>x.day===day)?.tasks.every(t=>t.id===task||t.state==='fait'||t.state==='attente');
  try{const r=await fetch('/api/planning?token='+encodeURIComponent(token),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task:b.dataset.task,day:b.dataset.day,action:b.dataset.do})});
   const d=await r.json().catch(()=>null);if(!r.ok)throw Error(d?.error||'Action impossible.');await load(vue.start);
   // Médaille et coupe se lisent sur toute la famille, côté serveur : on compare avant et après.
   const won=act==='done'&&!hadMedal&&!!vue.days.find(x=>x.day===day)?.medal,cup=won&&!hadCup&&!!vue.trophy;
-  if(won){pop(task,day);confetti(null,true);bounce(cup?'.trophy':`[data-medal="${day}"]`);if(cup)setTimeout(()=>confetti(null,true),700);toast(teamCheer(cup))}
-  else if(act==='done'){pop(task,day);confetti(last?null:from,last);if((vue.streak||0)>before)toast(cheer(vue.streak));else if(last)toast('Journée bouclée, bravo ! 🎉')}}
+  if(won){pop(task,day);confetti(null,true);success(cup?'trophy':'medal');bounce(cup?'.trophy':`[data-medal="${day}"]`);if(cup)setTimeout(()=>confetti(null,true),700);toast(teamCheer(cup))}
+  else if(act==='done'){pop(task,day);confetti(last?null:from,last);success(last?'day':'task');if((vue.streak||0)>before)toast(cheer(vue.streak));else if(last)toast('Journée bouclée, bravo ! 🎉')}}
  catch(e){toast(e.message);b.disabled=false}}
 function person(name,c){return `<span class="person" style="--person:${color(c)};--on:${ink(c)}"><span class="avatar">${esc((name||'?').slice(0,1))}</span>${esc(name||'Membre absent')}</span>`}
 function dayHtml(x,today,single){return `<article class="day ${x.day===today?'today':''}"><div class="dayhead">${single?`<h2>${long(x.day)}</h2>`:`<span class="dlink">${fmt(x.day,{weekday:'short',day:'numeric'})}</span>`}${x.medal?medal(x.day):''}</div>${x.tasks.map(t=>taskHtml(t,x.day)).join('')||'<div class="empty">Rien de prévu.</div>'}</article>`}
@@ -52,6 +53,7 @@ function render(d){const all=d.days.flatMap(x=>x.tasks),fait=all.filter(t=>t.sta
  document.querySelectorAll('[data-strip]').forEach(b=>b.onclick=()=>{jour=b.dataset.strip;render(d)});
  document.querySelectorAll('[data-do]').forEach(b=>b.onclick=()=>mark(b));$('#enablepush')?.addEventListener('click',enablePush);
 }
+soundToggle($('#sound'));
 if(!token)fail('Lien incomplet','Ce lien ne contient pas de jeton de partage.','Ouvre le lien exact transmis par la famille.');
 else{
  // Le manifeste propre au lien fait rouvrir ce planning depuis l'écran d'accueil.

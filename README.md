@@ -22,7 +22,8 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 - Notifications d'événements : tâche attribuée, tâche en attente de confirmation (aux parents), tâche confirmée (à l'enfant).
 - Récapitulatif quotidien des tâches du jour non déclarées terminées, et des confirmations en attente pour les parents.
 - Alerte en tête du planning tant que l'appareil ne reçoit pas les notifications. Même sans clés VAPID côté serveur, l'alerte propose d'autoriser l'appareil, qui s'abonne seul dès que les clés sont en place.
-- Célébrations : confettis et vibration en cochant une tâche, grande pluie de confettis quand la journée de la personne est bouclée. Désactivées si l'appareil demande de réduire les animations.
+- Célébrations : confettis et vibration en cochant une tâche, grande pluie de confettis quand la journée de la personne est bouclée. Confettis désactivés si l'appareil demande de réduire les animations.
+- Sons de célébration synthétisés dans le navigateur, sans fichier audio : ding et crépitement des confettis, arpège de journée bouclée, jingle de médaille, fanfare de coupe. Bouton haut-parleur dans l'en-tête pour les couper sur l'appareil.
 - Séries 🔥 : nombre de jours d'affilée où un membre a déclaré toutes ses tâches faites (database/streaks.sql). Une journée sans tâche ne compte pas ; la journée en cours ne casse la série qu'une fois passée. Affichées sur les badges, dans l'en-tête et dans les notifications.
 - Récompenses de groupe : 🏅 médaille du jour quand toute la famille a fait ses tâches, 🏆 coupe de la semaine quand toutes les tâches du lundi au dimanche sont faites. Grande pluie de confettis et notification aux autres membres au moment où elles sont gagnées, vitrine des médailles et coupes accumulées sous le titre (database/awards.sql).
 - Bilan du dimanche par notification : tâches faites sur la semaine, série en cours, et total de la famille pour les parents.
