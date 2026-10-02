@@ -6,7 +6,9 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 
 - Comptes individuels Supabase, création de famille et invitation par code.
 - Récupération de mot de passe par SMS (code à six chiffres, AllMySMS) ou par lien e-mail, et changement de mot de passe depuis Famille & rappels.
-- Planning jour et semaine visible par tous ; filtre par membre.
+- Planning jour et semaine visible par tous ; filtre par membre, depuis la liste ou en touchant le badge d'une personne.
+- Bouton ＋ sur chaque journée pour les parents : plusieurs tâches ponctuelles d'un coup, chacune attribuée à une personne.
+- Mémoire des tâches déjà attribuées, proposées à la saisie avec la dernière personne choisie (database/task-memory.sql).
 - Profils d'enfants gérés par un parent, sans compte ni adresse e-mail.
 - Invitation d'un autre parent par e-mail : le lien reçu crée son compte et lui donne directement les droits de parent.
 - Lien personnel par enfant, pour consulter ses tâches et les déclarer faites sans compte.
@@ -18,13 +20,13 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 - Installation PWA, abonnement Web Push par appareil, notification de test.
 - Notifications d'événements : tâche attribuée, tâche en attente de confirmation (aux parents), tâche confirmée (à l'enfant).
 - Récapitulatif quotidien des tâches du jour non déclarées terminées, et des confirmations en attente pour les parents.
-- Alerte en tête du planning tant que l'appareil ne reçoit pas les notifications.
+- Alerte en tête du planning tant que l'appareil ne reçoit pas les notifications. Même sans clés VAPID côté serveur, l'alerte propose d'autoriser l'appareil, qui s'abonne seul dès que les clés sont en place.
 - Démonstration explicitement séparée des comptes réels.
 
 ## Déployer via un dépôt GitHub privé et Vercel
 
 1. Créer un dépôt privé personnel sur GitHub et y déposer le contenu de ce dossier (package.json doit être à la racine). Ne jamais envoyer node_modules, .env ou de clés privées.
-2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, database/share-link.sql pour le lien de partage, database/managed-profiles.sql pour les profils gérés, puis database/family-code.sql pour le code famille lisible, database/invitations.sql pour inviter un parent par e-mail, et enfin database/notifications.sql pour les notifications d'événements. Chaque fichier se termine par une requête de contrôle dont toutes les lignes doivent afficher « en place ».
+2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, database/share-link.sql pour le lien de partage, database/managed-profiles.sql pour les profils gérés, puis database/family-code.sql pour le code famille lisible, database/invitations.sql pour inviter un parent par e-mail, database/notifications.sql pour les notifications d'événements, et enfin database/task-memory.sql pour la mémoire des tâches. Chaque fichier se termine par une requête de contrôle dont toutes les lignes doivent afficher « en place ».
 3. Dans Supabase Authentication, activer les comptes e-mail/mot de passe. Pour une famille, le plus simple est de créer les utilisateurs depuis Authentication > Users > Add user, avec leur mot de passe et confirmation explicite. Cela évite de dépendre du serveur e-mail de démonstration Supabase, qui ne permet pas l'envoi à tous les destinataires. Pour laisser les utilisateurs s'inscrire depuis l'application et confirmer leur adresse, configurer un SMTP opérationnel. Ne pas désactiver la confirmation uniquement pour contourner cet obstacle.
 4. Sur votre PC, installer Node.js LTS, ouvrir ce dossier dans un terminal et exécuter `npm ci`, puis `npm run keys`. Conserver la paire VAPID ; ne pas la régénérer après activation des téléphones. Une paire peut déjà se trouver dans .env.local, fichier local jamais versionné : la reprendre telle quelle plutôt qu'en produire une autre.
 5. Sur Vercel : Add New > Project > importer ce dépôt GitHub. Limiter l'installation GitHub Vercel au dépôt sélectionné. Framework Preset : Other ; Output Directory : public ; pas de commande de build nécessaire ; installation `npm ci`.

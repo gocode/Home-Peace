@@ -13,7 +13,7 @@ async function request(action,body){const r=await fetch('/api/push?action='+acti
 async function checkPush(){if(!vue?.who)return;
  if(vapid===undefined){try{vapid=(await fetch('/api/config').then(r=>r.json())).vapid||''}catch{return}}
  const state=await deviceState(vapid,request);if(state!==alerte){alerte=state;render(vue)}}
-async function enablePush(){try{await enableDevice(vapid,request);alerte='ok';render(vue);toast('Notifications activées : tu seras prévenu des tâches qui t’attendent.')}catch(e){toast(e.message);checkPush()}}
+async function enablePush(){try{alerte=await enableDevice(vapid,request);render(vue);toast(alerte==='ok'?'Notifications activées : tu seras prévenu des tâches qui t’attendent.':'Autorisation enregistrée : les rappels arriveront dès que le serveur sera prêt.')}catch(e){toast(e.message);checkPush()}}
 function toast(s){$('#toast').textContent=s;$('#toast').style.display='block';clearTimeout(timer);timer=setTimeout(()=>$('#toast').style.display='none',5000)}
 function fail(title,detail,hint){app.innerHTML=`<section class="auth panel"><h1>${esc(title)}</h1><p>${esc(detail)}</p><p class="muted">${esc(hint)}</p></section>`}
 async function load(week){

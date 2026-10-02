@@ -10,7 +10,8 @@ const worker=()=>Promise.race([navigator.serviceWorker.ready,new Promise((_,no)=
 const stale=(sub,vapid)=>{const k=sub.options?.applicationServerKey;if(!k)return false;const a=new Uint8Array(k),b=key(vapid);return a.length!==b.length||a.some((x,i)=>x!==b[i])};
 
 export async function deviceState(vapid,request){
- if(!vapid)return 'config';
+ // Sans clé serveur, on peut déjà obtenir l'autorisation : l'abonnement suivra dès que la clé sera là.
+ if(!vapid)return supported()&&Notification.permission==='granted'?'attente':'config';
  if(!supported())return ios()&&!standalone()?'ios':'unsupported';
  if(Notification.permission==='denied')return 'denied';
  if(Notification.permission!=='granted')return 'off';
@@ -27,15 +28,17 @@ export async function deviceState(vapid,request){
 }
 
 // À appeler directement depuis un clic : Safari n'accorde la demande d'autorisation qu'à un geste de l'utilisateur.
+// Rend 'ok' une fois abonné, ou 'attente' quand l'autorisation est accordée mais que le serveur n'a pas encore sa clé.
 export async function enableDevice(vapid,request){
- if(!vapid)throw Error('Les notifications doivent encore être configurées.');
  if(!supported())throw Error(ios()&&!standalone()?"Sur iPhone, ajoute d'abord l'application à l'écran d'accueil, puis ouvre-la depuis l'icône.":"Ce navigateur ne gère pas les notifications. Essaie avec Chrome, Edge, Firefox ou Safari récent.");
  const permission=await Notification.requestPermission();
  if(permission!=='granted')throw Error(permission==='denied'?'Les notifications sont bloquées : rouvre-les dans les réglages du navigateur ou du téléphone.':'Autorise les notifications pour être prévenu.');
+ if(!vapid)return 'attente';
  const reg=await worker();let sub=await reg.pushManager.getSubscription();
  if(sub&&stale(sub,vapid)){await sub.unsubscribe();sub=null}
  sub=sub||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key(vapid)});
  await request('subscribe',sub.toJSON());
+ return 'ok';
 }
 
 const texts={
@@ -44,7 +47,8 @@ const texts={
  denied:['Les notifications sont bloquées sur cet appareil',"Tu les as refusées pour ce site, l'application ne peut plus les redemander. Sur Android : touche l'icône à gauche de l'adresse, puis Autorisations → Notifications. Sur iPhone : Réglages → Notifications → À chacun son tour. Recharge ensuite cette page."],
  ios:['Installe l’application pour recevoir les rappels',"Sur iPhone, les notifications ne fonctionnent que depuis l'écran d'accueil (iOS 16.4 minimum) : touche Partager → Sur l'écran d'accueil, puis ouvre l'application depuis sa nouvelle icône."],
  unsupported:['Ce navigateur ne peut pas recevoir de notifications',"Ouvre le planning avec Chrome, Edge, Firefox ou un Safari récent pour être prévenu des tâches qui t'attendent."],
- config:['Les notifications ne sont pas encore en service',"Le serveur n'a pas encore ses clés de notification. Préviens la personne qui gère l'application."]};
+ config:['Les notifications ne sont pas encore en service',"Le serveur n'a pas encore ses clés de notification. Autorise dès maintenant cet appareil : il s'abonnera tout seul dès que le service sera prêt.",'Autoriser les notifications'],
+ attente:['Notifications autorisées, en attente du serveur',"Cet appareil est prêt et s'abonnera tout seul dès que le serveur aura ses clés de notification. Préviens la personne qui gère l'application."]};
 
 // Bannière d'alerte, vide quand tout va bien ou quand l'état n'a pas pu être établi. Le bouton porte l'identifiant enablepush.
 export function alertHtml(state){const t=texts[state];if(!t)return '';
