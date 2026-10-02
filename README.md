@@ -8,6 +8,7 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 - Récupération de mot de passe par SMS (code à six chiffres, AllMySMS) ou par lien e-mail, et changement de mot de passe depuis Famille & rappels.
 - Planning jour et semaine visible par tous ; filtre par membre.
 - Profils d'enfants gérés par un parent, sans compte ni adresse e-mail.
+- Invitation d'un autre parent par e-mail : le lien reçu crée son compte et lui donne directement les droits de parent.
 - Lien personnel par enfant, pour consulter ses tâches et les déclarer faites sans compte.
 - Lien de partage du planning en lecture seule, sans compte, révocable par un parent.
 - Création, modification et suppression de séries de tâches par le parent.
@@ -21,7 +22,7 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 ## Déployer via un dépôt GitHub privé et Vercel
 
 1. Créer un dépôt privé personnel sur GitHub et y déposer le contenu de ce dossier (package.json doit être à la racine). Ne jamais envoyer node_modules, .env ou de clés privées.
-2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, database/share-link.sql pour le lien de partage, database/managed-profiles.sql pour les profils gérés, puis database/family-code.sql pour le code famille lisible.
+2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, database/share-link.sql pour le lien de partage, database/managed-profiles.sql pour les profils gérés, puis database/family-code.sql pour le code famille lisible, et enfin database/invitations.sql pour inviter un parent par e-mail. Chaque fichier se termine par une requête de contrôle dont toutes les lignes doivent afficher « en place ».
 3. Dans Supabase Authentication, activer les comptes e-mail/mot de passe. Pour une famille, le plus simple est de créer les utilisateurs depuis Authentication > Users > Add user, avec leur mot de passe et confirmation explicite. Cela évite de dépendre du serveur e-mail de démonstration Supabase, qui ne permet pas l'envoi à tous les destinataires. Pour laisser les utilisateurs s'inscrire depuis l'application et confirmer leur adresse, configurer un SMTP opérationnel. Ne pas désactiver la confirmation uniquement pour contourner cet obstacle.
 4. Sur votre PC, installer Node.js LTS, ouvrir ce dossier dans un terminal et exécuter `npm ci`, puis `npm run keys`. Conserver la paire VAPID ; ne pas la régénérer après activation des téléphones.
 5. Sur Vercel : Add New > Project > importer ce dépôt GitHub. Limiter l'installation GitHub Vercel au dépôt sélectionné. Framework Preset : Other ; Output Directory : public ; pas de commande de build nécessaire ; installation `npm ci`.
@@ -42,7 +43,7 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 
 7. Déployer. Reporter l'URL HTTPS finale dans Supabase Authentication > URL Configuration > Site URL. Ajouter cette même URL dans Redirect URLs : la récupération de mot de passe y renvoie l'utilisateur. Si l'inscription par e-mail est utilisée, faire de même pour ses redirections.
 8. Le premier parent se connecte puis crée son profil sans code famille. Il retrouve le code dans Famille & rappels. Les autres se connectent avec leurs comptes respectifs et ce code.
-9. Pour un deuxième parent, changer le rôle de ce membre en `parent` depuis le Table Editor Supabase. Les enfants ne peuvent pas changer leur rôle via l'application.
+9. Pour un deuxième parent, l'inviter par e-mail depuis Famille & rappels (voir « Inviter un parent » plus bas). Les enfants ne peuvent pas changer leur rôle via l'application.
 10. Installer sur chaque téléphone, activer les notifications et envoyer un test. Sur iPhone : iOS 16.4 minimum, Safari > Partager > Sur l'écran d'accueil, puis ouvrir l'application installée. Sur Android : utiliser un navigateur prenant en charge Web Push.
 
 Après connexion GitHub, chaque modification de la branche de production déclenche un déploiement Vercel. Les variables secrètes restent dans Vercel.
@@ -78,6 +79,20 @@ La réponse est volontairement identique qu'un compte existe ou non à cette adr
 Le code qui permet de rejoindre un foyer compte six caractères, par exemple 7KQ42W, et se retrouve dans « Famille & rappels ». Son alphabet exclut I, L, O et U : aucune confusion possible entre un 1 et un I, ou un 0 et un O. La saisie est indulgente — minuscules, espaces et tirets sont acceptés, et les sosies de caractères sont ramenés au bon, aussi bien dans le navigateur que dans la fonction SQL.
 
 Un parent le renouvelle depuis les mêmes réglages, ce qui rend l ancien inutilisable sur-le-champ. Avant cette évolution, ce code était un identifiant UUID de 36 caractères : impossible à noter, et une saisie approximative renvoyait une erreur de base de données incompréhensible.
+
+
+## Inviter un parent
+
+Dans « Famille & rappels », un parent saisit le prénom et l'adresse e-mail de l'autre parent. Supabase lui envoie un lien d'invitation : en l'ouvrant, la personne arrive dans l'application déjà connectée, choisit son mot de passe et rejoint le foyer avec le rôle parent, sans code à saisir. Si l'adresse possède déjà un compte, c'est un lien de connexion qui part ; l'invitation s'applique à l'arrivée.
+
+- L'invitation vaut sept jours. Elle reste visible dans les réglages tant qu'elle n'est pas acceptée, et peut être renvoyée ou annulée.
+- Elle ne s'applique qu'à une adresse confirmée : s'inscrire soi-même avec l'adresse invitée sans la confirmer ne donne aucun droit.
+- Dix envois par foyer et par jour au plus, et pas deux envois à la même adresse dans la même minute.
+- Un compte qui a déjà un profil dans une autre famille ne peut pas en rejoindre une seconde.
+
+Prérequis : un SMTP opérationnel dans Supabase (Authentication > Emails), comme pour l'inscription, et l'URL du site dans Authentication > URL Configuration > Redirect URLs. Le modèle d'e-mail « Invite user » se personnalise au même endroit.
+
+Si l'ajout d'un enfant ou l'invitation affiche « La base de données n'est pas à jour », exécuter le fichier SQL indiqué dans le message : c'est le signe que la migration correspondante n'a pas été passée.
 
 ## Les profils de la famille
 
