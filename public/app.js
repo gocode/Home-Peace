@@ -160,7 +160,9 @@ function settings(){const parent=me.role==='parent';if(alerte!=='ok'&&!demo)sect
 async function setColor(el){const m=members.find(x=>x.id===el.dataset.color);if(!m)return;
  try{if(!demo)await api('/rest/v1/rpc/set_member_color',{method:'POST',body:{target:m.id,new_color:el.value}});m.color=el.value.toLowerCase();if(m.id===me.id)me.color=m.color;el.previousElementSibling.setAttribute('style',tint(m));render()}catch(e){el.value=color(m);toast(e.message)}}
 async function setAssignable(el){const m=members.find(x=>x.id===el.dataset.assign);if(!m)return;el.disabled=true;
- try{if(!demo)await api('/rest/v1/rpc/set_member_assignable',{method:'POST',body:{target:m.id,enabled:el.checked}});m.assignable=el.checked;render();toast(el.checked?m.name+' reçoit de nouveau des tâches.':m.name+' n’est plus proposé pour les tâches.')}catch(e){el.checked=!el.checked;toast(e.message)}finally{el.disabled=false}}
+ try{let n=0;if(demo){if(!el.checked)for(const t of tasks)if(t.rotating&&t.people.includes(m.id)&&t.people.length>1){t.people=t.people.filter(p=>p!==m.id);n++}}
+  else{n=await api('/rest/v1/rpc/set_member_assignable',{method:'POST',body:{target:m.id,enabled:el.checked}})||0;if(n)tasks=await api('/rest/v1/tasks?select=*&order=created_at')}
+  m.assignable=el.checked;render();toast(el.checked?m.name+' reçoit de nouveau des tâches. Pour le remettre dans une rotation, modifie la tâche.':m.name+' n’est plus proposé pour les tâches'+(n?' et quitte '+(n>1?n+' rotations.':'une rotation.'):'.'))}catch(e){el.checked=!el.checked;toast(e.message)}finally{el.disabled=false}}
 async function reopen(){members=await api('/rest/v1/members?select=*');me=mine();modal.close();settings()}
 async function addMember(e){e.preventDefault();if(demo)return toast('Indisponible dans la démonstration.');const form=e.target;if(!form.reportValidity())return;const b=e.submitter||form;b.disabled=true;
  try{await api('/rest/v1/rpc/create_member',{method:'POST',body:{display_name:new FormData(form).get('name').trim()}});await reopen();toast('Profil créé.')}catch(e){toast(e.message);b.disabled=false}}
