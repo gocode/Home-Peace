@@ -50,7 +50,7 @@ export default async function handler(req,res){
   // Médaille du jour et coupe de la semaine : toujours sur toute la famille, même pour un lien personnel.
   res.json({home:maison?.name??'',today,start,trophy:won(tasks,marks,days),awards:vitrine,
    who:owner?owner.name:null,color:owner?owner.color:null,streak:owner?series[owner.id]||0:null,
-   people:owner?[{name:owner.name,color:owner.color}]:members.filter(m=>m.assignable!==false||tasks.some(t=>t.people.includes(m.id))).map(m=>({name:m.name,color:m.color,streak:series[m.id]||0})),
+   people:owner?[{name:owner.name,color:owner.color}]:members.filter(m=>m.assignable!==false).map(m=>({name:m.name,color:m.color,streak:series[m.id]||0})),
    days:days.map(d=>({day:d,medal:complete(tasks,marks,d),tasks:tasks.filter(t=>occurs(t,d)&&(!owner||person(t,d)?.id===owner.id)).map(t=>{const m=person(t,d),c=marks.find(c=>c.task===t.id&&c.day===d);
     // L'identifiant de tâche n'est livré qu'au titulaire du lien, qui a justement le droit d'agir dessus.
     return {...(owner?{id:t.id}:{}),title:t.title,who:m?.name??null,color:m?.color??null,rotating:!!t.rotating,
