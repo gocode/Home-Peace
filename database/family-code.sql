@@ -1,13 +1,14 @@
 -- Exécuter dans le SQL Editor Supabase, après les migrations précédentes.
 -- Rejouable : relancer ce fichier en entier ne produit aucune erreur.
--- Le code famille devient notable à la main : huit caractères, sans I, L, O ni U, donc sans confusion possible.
+-- Le code famille devient notable à la main : six caractères, sans I, L, O ni U, donc sans confusion possible.
 
 create or replace function public.new_invite() returns text language sql volatile set search_path=public as $$
- select string_agg(substr('0123456789ABCDEFGHJKMNPQRSTVWXYZ',1+floor(random()*32)::int,1),'') from generate_series(1,8)
+ select string_agg(substr('0123456789ABCDEFGHJKMNPQRSTVWXYZ',1+floor(random()*32)::int,1),'') from generate_series(1,6)
 $$;
 
 alter table public.homes add column if not exists code text;
-update public.homes set code=public.new_invite() where code is null;
+-- Les codes de huit caractères d'une première version sont raccourcis.
+update public.homes set code=public.new_invite() where code is null or length(code)<>6;
 create unique index if not exists homes_code_unique on public.homes(code);
 do $$ begin
  if exists(select 1 from public.homes where code is null) then raise exception 'Un foyer sans code subsiste'; end if;
@@ -53,7 +54,7 @@ grant execute on function public.enter_home(text,text),public.rotate_invite() to
 select 'colonne homes.code' as objet, case when exists(select 1 from information_schema.columns where table_schema='public' and table_name='homes' and column_name='code' and is_nullable='NO') then 'en place' else 'MANQUANT' end as etat
 union all select 'ancien code retiré', case when not exists(select 1 from information_schema.columns where table_schema='public' and table_name='homes' and column_name='invite') then 'en place' else 'MANQUANT' end
 union all select 'une seule version de enter_home', case when (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='enter_home')=1 then 'en place' else 'MANQUANT' end
-union all select 'codes attribués', case when not exists(select 1 from public.homes where code is null or length(code)<>8) then 'en place' else 'MANQUANT' end;
+union all select 'codes attribués', case when not exists(select 1 from public.homes where code is null or length(code)<>6) then 'en place' else 'MANQUANT' end;
 
 -- Le code de chaque foyer, à relever puis à transmettre à la famille.
 select name as foyer, code as "code famille" from public.homes order by name;

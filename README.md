@@ -75,7 +75,7 @@ La réponse est volontairement identique qu'un compte existe ou non à cette adr
 
 ## Le code famille
 
-Le code qui permet de rejoindre un foyer compte huit caractères, par exemple 7KQ4-2WRM, affichés par groupes de quatre dans « Famille & rappels ». Son alphabet exclut I, L, O et U : aucune confusion possible entre un 1 et un I, ou un 0 et un O. La saisie est indulgente — minuscules, espaces et tirets sont acceptés, et les sosies de caractères sont ramenés au bon, aussi bien dans le navigateur que dans la fonction SQL.
+Le code qui permet de rejoindre un foyer compte six caractères, par exemple 7KQ42W, et se retrouve dans « Famille & rappels ». Son alphabet exclut I, L, O et U : aucune confusion possible entre un 1 et un I, ou un 0 et un O. La saisie est indulgente — minuscules, espaces et tirets sont acceptés, et les sosies de caractères sont ramenés au bon, aussi bien dans le navigateur que dans la fonction SQL.
 
 Un parent le renouvelle depuis les mêmes réglages, ce qui rend l ancien inutilisable sur-le-champ. Avant cette évolution, ce code était un identifiant UUID de 36 caractères : impossible à noter, et une saisie approximative renvoyait une erreur de base de données incompréhensible.
 
