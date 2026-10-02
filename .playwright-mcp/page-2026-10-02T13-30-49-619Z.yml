@@ -1,0 +1,55 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link "✓ À chacun son tour" [ref=e3] [cursor=pointer]:
+      - /url: /
+      - generic [ref=e4]: ✓
+      - text: À chacun son tour
+    - button "Se déconnecter" [ref=e7] [cursor=pointer]
+  - main [ref=e5]:
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - paragraph [ref=e22]: Famille Martin · Bonjour Julien
+        - heading "Chacun fait sa part." [level=1] [ref=e23]
+      - button "Famille & rappels" [ref=e25] [cursor=pointer]
+    - generic [ref=e26]:
+      - strong [ref=e27]: 0 / 0
+      - generic [ref=e28]: Tâches terminées cette semaine
+    - generic [ref=e30]:
+      - generic [ref=e31]:
+        - button "Période précédente" [ref=e32] [cursor=pointer]: ‹
+        - strong [ref=e33]: Semaine du 28 septembre 2026
+        - button "Période suivante" [ref=e34] [cursor=pointer]: ›
+        - button "Aujourd'hui" [ref=e35] [cursor=pointer]
+      - generic [ref=e36]:
+        - button "Semaine" [ref=e37] [cursor=pointer]
+        - button "Jour" [ref=e38] [cursor=pointer]
+        - combobox "Filtrer par membre" [ref=e39]:
+          - option "Toute la famille" [selected]
+          - option "Mes tâches"
+          - option "Julien"
+    - generic [ref=e42]:
+      - generic [ref=e43]: J
+      - text: Julien
+    - generic [ref=e44]:
+      - article [ref=e45]:
+        - button "lun. 28" [ref=e47] [cursor=pointer]
+        - generic [ref=e48]: Rien de prévu. Un peu de répit !
+      - article [ref=e49]:
+        - button "mar. 29" [ref=e51] [cursor=pointer]
+        - generic [ref=e52]: Rien de prévu. Un peu de répit !
+      - article [ref=e53]:
+        - button "mer. 30" [ref=e55] [cursor=pointer]
+        - generic [ref=e56]: Rien de prévu. Un peu de répit !
+      - article [ref=e57]:
+        - button "jeu. 1" [ref=e59] [cursor=pointer]
+        - generic [ref=e60]: Rien de prévu. Un peu de répit !
+      - article [ref=e61]:
+        - button "ven. 2" [ref=e63] [cursor=pointer]
+        - generic [ref=e64]: Rien de prévu. Un peu de répit !
+      - article [ref=e65]:
+        - button "sam. 3" [ref=e67] [cursor=pointer]
+        - generic [ref=e68]: Rien de prévu. Un peu de répit !
+      - article [ref=e69]:
+        - button "dim. 4" [ref=e71] [cursor=pointer]
+        - generic [ref=e72]: Rien de prévu. Un peu de répit !
+    - paragraph [ref=e73]: Tout le monde voit le planning. Chacun coche ses tâches ; les parents peuvent gérer l'ensemble.

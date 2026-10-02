@@ -1,0 +1,81 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - link "✓ À chacun son tour" [ref=e3] [cursor=pointer]:
+      - /url: /
+      - generic [ref=e4]: ✓
+      - text: À chacun son tour
+    - button "Se déconnecter" [ref=e7] [cursor=pointer]
+  - main [ref=e5]:
+    - generic [ref=e74]:
+      - generic [ref=e75]:
+        - paragraph [ref=e76]: Famille Martin · Bonjour Julien
+        - heading "Chacun fait sa part." [level=1] [ref=e77]
+      - button "Famille & rappels" [ref=e79] [cursor=pointer]
+    - generic [ref=e80]:
+      - strong [ref=e81]: 0 / 0
+      - generic [ref=e82]: Tâches terminées cette semaine
+    - generic [ref=e84]:
+      - generic [ref=e85]:
+        - button "Période précédente" [ref=e86] [cursor=pointer]: ‹
+        - strong [ref=e87]: Semaine du 28 septembre 2026
+        - button "Période suivante" [ref=e88] [cursor=pointer]: ›
+        - button "Aujourd'hui" [ref=e89] [cursor=pointer]
+      - generic [ref=e90]:
+        - button "Semaine" [ref=e91] [cursor=pointer]
+        - button "Jour" [ref=e92] [cursor=pointer]
+        - combobox "Filtrer par membre" [ref=e93]:
+          - option "Toute la famille" [selected]
+          - option "Mes tâches"
+          - option "Julien"
+    - generic [ref=e96]:
+      - generic [ref=e97]: J
+      - text: Julien
+    - generic [ref=e98]:
+      - article [ref=e99]:
+        - button "lun. 28" [ref=e101] [cursor=pointer]
+        - generic [ref=e102]: Rien de prévu. Un peu de répit !
+      - article [ref=e103]:
+        - button "mar. 29" [ref=e105] [cursor=pointer]
+        - generic [ref=e106]: Rien de prévu. Un peu de répit !
+      - article [ref=e107]:
+        - button "mer. 30" [ref=e109] [cursor=pointer]
+        - generic [ref=e110]: Rien de prévu. Un peu de répit !
+      - article [ref=e111]:
+        - button "jeu. 1" [ref=e113] [cursor=pointer]
+        - generic [ref=e114]: Rien de prévu. Un peu de répit !
+      - article [ref=e115]:
+        - button "ven. 2" [ref=e117] [cursor=pointer]
+        - generic [ref=e118]: Rien de prévu. Un peu de répit !
+      - article [ref=e119]:
+        - button "sam. 3" [ref=e121] [cursor=pointer]
+        - generic [ref=e122]: Rien de prévu. Un peu de répit !
+      - article [ref=e123]:
+        - button "dim. 4" [ref=e125] [cursor=pointer]
+        - generic [ref=e126]: Rien de prévu. Un peu de répit !
+    - paragraph [ref=e127]: Tout le monde voit le planning. Chacun coche ses tâches ; les parents peuvent gérer l'ensemble.
+  - dialog [ref=e128]:
+    - generic [ref=e129]:
+      - heading "Famille & rappels" [level=2] [ref=e130]
+      - button "Fermer" [active] [ref=e131] [cursor=pointer]: ✕
+    - generic [ref=e133]:
+      - generic [ref=e134]: J
+      - text: Julien
+    - heading "Partager le planning" [level=2] [ref=e135]
+    - paragraph [ref=e136]: Aucun lien de partage actif pour le moment.
+    - heading "Mon mot de passe" [level=2] [ref=e137]
+    - generic [ref=e138]:
+      - generic [ref=e139]:
+        - generic [ref=e140]: Nouveau mot de passe
+        - textbox "Nouveau mot de passe" [ref=e141]
+      - generic [ref=e142]:
+        - generic [ref=e143]: Confirme le mot de passe
+        - textbox "Confirme le mot de passe" [ref=e144]
+      - button "Changer mon mot de passe" [ref=e145] [cursor=pointer]
+    - heading "Les rappels sur ce téléphone" [level=2] [ref=e146]
+    - paragraph [ref=e147]: Un récapitulatif quotidien des tâches restant à faire. Le rappel fonctionne même quand cette page est fermée.
+    - paragraph [ref=e148]: "Sur iPhone : ouvre le site dans Safari, utilise Partager → Sur l'écran d'accueil, puis ouvre l'application installée."
+    - generic [ref=e149]:
+      - button "Activer les notifications" [ref=e150] [cursor=pointer]
+      - button "Envoyer un test" [ref=e151] [cursor=pointer]
+    - status
+    - paragraph [ref=e152]: "Rappel commun en fin de journée : le déclenchement configuré sur Vercel est à 16 h UTC (18 h en été, 17 h en hiver à Paris), avec un décalage possible. Le téléphone peut différer l'affichage."

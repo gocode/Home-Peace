@@ -1,0 +1,105 @@
+- generic [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - link "✓ À chacun son tour" [ref=f1e3] [cursor=pointer]:
+      - /url: /
+      - generic [ref=f1e4]: ✓
+      - text: À chacun son tour
+    - button "Se déconnecter" [ref=f1e5] [cursor=pointer]
+  - main [ref=f1e6]:
+    - generic [ref=f1e18]:
+      - generic [ref=f1e19]:
+        - paragraph [ref=f1e20]: Famille Martin · Bonjour Julien
+        - heading "Chacun fait sa part." [level=1] [ref=f1e21]
+      - generic [ref=f1e22]:
+        - button "Famille & rappels" [ref=f1e23] [cursor=pointer]
+        - button "＋ Ajouter une tâche" [ref=f1e24] [cursor=pointer]
+    - generic [ref=f1e25]:
+      - strong [ref=f1e26]: 0 / 0
+      - generic [ref=f1e27]: Tâches terminées cette semaine
+    - generic [ref=f1e29]:
+      - generic [ref=f1e30]:
+        - button "Période précédente" [ref=f1e31] [cursor=pointer]: ‹
+        - strong [ref=f1e32]: Semaine du 28 septembre 2026
+        - button "Période suivante" [ref=f1e33] [cursor=pointer]: ›
+        - button "Aujourd'hui" [ref=f1e34] [cursor=pointer]
+      - generic [ref=f1e35]:
+        - button "Semaine" [ref=f1e36] [cursor=pointer]
+        - button "Jour" [ref=f1e37] [cursor=pointer]
+        - combobox "Filtrer par membre" [ref=f1e38]:
+          - option "Toute la famille" [selected]
+          - option "Mes tâches"
+          - option "Julien"
+    - generic [ref=f1e41]:
+      - generic [ref=f1e42]: J
+      - text: Julien
+    - generic [ref=f1e43]:
+      - article [ref=f1e44]:
+        - button "lun. 28" [ref=f1e46] [cursor=pointer]
+        - generic [ref=f1e47]: Rien de prévu. Un peu de répit !
+      - article [ref=f1e48]:
+        - button "mar. 29" [ref=f1e50] [cursor=pointer]
+        - generic [ref=f1e51]: Rien de prévu. Un peu de répit !
+      - article [ref=f1e52]:
+        - button "mer. 30" [ref=f1e54] [cursor=pointer]
+        - generic [ref=f1e55]: Rien de prévu. Un peu de répit !
+      - article [ref=f1e56]:
+        - button "jeu. 1" [ref=f1e58] [cursor=pointer]
+        - generic [ref=f1e59]: Rien de prévu. Un peu de répit !
+      - article [ref=f1e60]:
+        - button "ven. 2" [ref=f1e62] [cursor=pointer]
+        - generic [ref=f1e63]: Rien de prévu. Un peu de répit !
+      - article [ref=f1e64]:
+        - button "sam. 3" [ref=f1e66] [cursor=pointer]
+        - generic [ref=f1e67]: Rien de prévu. Un peu de répit !
+      - article [ref=f1e68]:
+        - button "dim. 4" [ref=f1e70] [cursor=pointer]
+        - generic [ref=f1e71]: Rien de prévu. Un peu de répit !
+    - paragraph [ref=f1e72]: Tout le monde voit le planning. Chacun coche ses tâches ; les parents peuvent gérer l'ensemble.
+  - dialog [ref=f1e73]:
+    - generic [ref=f1e74]:
+      - heading "Famille & rappels" [level=2] [ref=f1e75]
+      - button "Fermer" [active] [ref=f1e76] [cursor=pointer]: ✕
+    - generic [ref=f1e78]:
+      - generic [ref=f1e79]: J
+      - text: Julien
+    - generic [ref=f1e80]:
+      - generic [ref=f1e81]: Code pour rejoindre la famille
+      - textbox "Code pour rejoindre la famille" [ref=f1e82]: 7KQ4-2WRM
+    - paragraph [ref=f1e83]: Transmets ce code uniquement à ta famille. Chaque nouveau membre rejoint avec un profil enfant.
+    - generic [ref=f1e84]:
+      - button "Copier le code" [ref=f1e85] [cursor=pointer]
+      - button "Renouveler le code" [ref=f1e86] [cursor=pointer]
+    - heading "Les profils de la famille" [level=2] [ref=f1e87]
+    - paragraph [ref=f1e88]: "Un enfant sans adresse e-mail n'a pas besoin de compte : crée-lui un profil, puis donne-lui son lien personnel."
+    - generic [ref=f1e89]:
+      - generic [ref=f1e90]:
+        - strong [ref=f1e91]: Julien
+        - generic [ref=f1e92]: compte personnel · parent
+      - button "Renommer" [ref=f1e94] [cursor=pointer]
+    - generic [ref=f1e95]:
+      - generic [ref=f1e96]:
+        - generic [ref=f1e97]: Ajouter un enfant
+        - textbox "Ajouter un enfant" [ref=f1e98]:
+          - /placeholder: Son prénom
+      - button "Créer le profil" [ref=f1e99] [cursor=pointer]
+    - paragraph [ref=f1e100]: Qui détient un lien personnel peut déclarer les tâches de cet enfant comme faites, sans pouvoir toucher aux réglages ni aux autres membres. La confirmation parentale reste entre tes mains.
+    - heading "Partager le planning" [level=2] [ref=f1e101]
+    - paragraph [ref=f1e102]: Aucun lien actif. Un lien permet de montrer le planning aux grands-parents ou à une nounou, sans leur créer de compte.
+    - button "Créer un lien de partage" [ref=f1e103] [cursor=pointer]
+    - heading "Mon mot de passe" [level=2] [ref=f1e104]
+    - generic [ref=f1e105]:
+      - generic [ref=f1e106]:
+        - generic [ref=f1e107]: Nouveau mot de passe
+        - textbox "Nouveau mot de passe" [ref=f1e108]
+      - generic [ref=f1e109]:
+        - generic [ref=f1e110]: Confirme le mot de passe
+        - textbox "Confirme le mot de passe" [ref=f1e111]
+      - button "Changer mon mot de passe" [ref=f1e112] [cursor=pointer]
+    - heading "Les rappels sur ce téléphone" [level=2] [ref=f1e113]
+    - paragraph [ref=f1e114]: Un récapitulatif quotidien des tâches restant à faire. Le rappel fonctionne même quand cette page est fermée.
+    - paragraph [ref=f1e115]: "Sur iPhone : ouvre le site dans Safari, utilise Partager → Sur l'écran d'accueil, puis ouvre l'application installée."
+    - generic [ref=f1e116]:
+      - button "Activer les notifications" [ref=f1e117] [cursor=pointer]
+      - button "Envoyer un test" [ref=f1e118] [cursor=pointer]
+    - status
+    - paragraph [ref=f1e119]: "Rappel commun en fin de journée : le déclenchement configuré sur Vercel est à 16 h UTC (18 h en été, 17 h en hiver à Paris), avec un décalage possible. Le téléphone peut différer l'affichage."

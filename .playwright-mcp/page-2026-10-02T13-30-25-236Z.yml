@@ -1,0 +1,8 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link "✓ À chacun son tour" [ref=e3] [cursor=pointer]:
+      - /url: /
+      - generic [ref=e4]: ✓
+      - text: À chacun son tour
+  - main [ref=e5]:
+    - paragraph [ref=e6]: Chargement du planning…
