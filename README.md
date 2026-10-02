@@ -169,4 +169,6 @@ Les tables utilisent la sécurité par ligne Supabase. Les fonctions d'écriture
 
 `npm run check` vérifie la syntaxe JavaScript. Un simple serveur statique permet d'explorer la démonstration ; les fonctions /api demandent l'environnement Vercel (par exemple `npx vercel dev`). Aucune compilation frontend n'est nécessaire.
 
-Le SQL initial n'est pas une migration réexécutable. Les évolutions de schéma devront être livrées dans de nouvelles migrations. Modifier une série de tâches modifie aussi son affichage passé ; pour conserver le passé, fixer sa date de fin puis créer une nouvelle série.
+Le SQL initial n'est pas une migration réexécutable. Les évolutions de schéma devront être livrées dans de nouvelles migrations.
+
+`npm run migrate` applique les fichiers de database/ à la base Supabase, sans passer par le SQL Editor. Il lit `DATABASE_URL` dans .env.local : l'URI « Session pooler » de Supabase > Connect > Direct, avec le mot de passe de la base (et non les clés d'API). setup.sql ne passe que sur une base vide ; chaque autre fichier est rejoué dans sa propre transaction, et ses lignes de contrôle sont affichées. Une nouvelle migration doit être ajoutée à la liste ordonnée de scripts/migrate.js. Modifier une série de tâches modifie aussi son affichage passé ; pour conserver le passé, fixer sa date de fin puis créer une nouvelle série.
