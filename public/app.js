@@ -1,6 +1,7 @@
 import {deviceState,enableDevice,alertHtml} from '/notify.js';
 import {icon} from '/icons.js';
 import {confetti,pop,bounce,flame,cheer,medal,smallMedal,trophy,showcase,teamCheer} from '/fun.js';
+import {unlock,success,soundToggle} from '/sound.js';
 const $=s=>document.querySelector(s), app=$('#app'), modal=$('#modal');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const iso=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(d);
@@ -32,7 +33,7 @@ const showPhone=p=>p?('0'+p.slice(2)).replace(/(\d{2})(?=\d)/g,'$1 '):'';
 async function local(path,body){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>null);if(!r.ok)throw Error(d?.error||'Service indisponible.');return d}
 const ready=()=>!!(cfg.url&&cfg.key);
 function logout(){session=null;localStorage.removeItem('session');demo=false;me=null;alerte='inconnu';pushChecked=false;$('#account').hidden=true;$('#settings').hidden=true;authScreen()}
-$('#account').innerHTML=icon('logout');$('#settings').innerHTML=icon('settings');
+soundToggle($('#sound'));$('#account').innerHTML=icon('logout');$('#settings').innerHTML=icon('settings');
 $('#account').onclick=()=>{if(demo||confirm('Te déconnecter de cet appareil ?'))logout()};$('#settings').onclick=()=>settings();
 function authScreen(){app.innerHTML=`<section class="auth panel"><h1>La maison, en équipe.</h1><p class="muted">Connecte-toi pour retrouver le planning de toute la famille.</p>${!ready()?'<div class="notice">Cette version n\'est pas encore configurée : l\'adresse du service ou sa clé publique manque côté serveur. Les comptes et les notifications seront disponibles une fois cette configuration en place.</div>':''}<form id="auth"><label><span>Adresse e-mail</span><input name="email" type="email" autocomplete="username" required></label><label><span>Mot de passe</span><input name="password" type="password" minlength="10" autocomplete="current-password" required></label><button class="primary" ${!ready()?'disabled':''}>Se connecter</button><button type="button" id="signup" ${!ready()?'disabled':''}>Créer mon compte</button></form><button id="forgot" class="link" ${!ready()?'disabled':''}>Mot de passe oublié ?</button><p class="foot">Chaque membre possède son propre compte. Le premier parent crée la famille ; les autres la rejoignent avec son code.</p><button id="try">Explorer la démonstration</button></section>`;
  $('#auth').onsubmit=e=>authenticate(e,false);$('#signup').onclick=e=>authenticate(e,true);$('#forgot').onclick=()=>forgotScreen($('#auth').email.value);$('#try').onclick=startDemo;
@@ -109,11 +110,11 @@ function taskHtml(t,d){const m=person(t,d),c=doneOn(t,d),today=iso(new Date()),p
  return `<div class="task ${state}" style="--person:${color(m)}">${check}<div class="info"><h3>${esc(t.title)}</h3><div class="meta">${avatar(m)}${status?`<span class="status">${status}</span>`:''}${t.rotating?`<span class="rot" title="À tour de rôle" role="img" aria-label="À tour de rôle">${icon('repeat')}</span>`:''}</div></div>${parent?`<div class="acts">${c&&!c.approved?ib('checks','Confirmer « '+t.title+' »',`data-do="approve" data-task="${esc(t.id)}" data-day="${d}"`,'approve'):''}${ib('pencil','Modifier « '+t.title+' »',`data-edit="${esc(t.id)}"`)}</div>`:''}</div>`}
 function move(n){selected=add(selected,n);refresh()}function refresh(){if(demo)render();else load()}
 // Cocher se fête : petite gerbe, ou grande pluie quand c'était la dernière tâche de la personne ce jour-là.
-async function mark(b){b.disabled=true;const {task,day}=b.dataset,act=b.dataset.do,from=b.getBoundingClientRect(),t=tasks.find(x=>x.id===task),m=t&&person(t,day),before=streaks[m?.id]||0;
+async function mark(b){b.disabled=true;unlock();const {task,day}=b.dataset,act=b.dataset.do,from=b.getBoundingClientRect(),t=tasks.find(x=>x.id===task),m=t&&person(t,day),before=streaks[m?.id]||0;
  const last=act==='done'&&!!m&&tasks.every(x=>x.id===task||!occurs(x,day)||person(x,day)?.id!==m.id||doneOn(x,day));
  // Médaille ou coupe gagnée par ce coup-ci : elle ne l'était pas avant, elle l'est en comptant cette tâche.
  const won=act==='done'&&!allDone(day)&&allDone(day,{task,day}),cup=won&&!weekWon(monday(day))&&weekWon(monday(day),{task,day});
- try{await record(b);if(act==='undo')return;pop(task,day);confetti(last||won?null:from,last||won);
+ try{await record(b);if(act==='undo')return;pop(task,day);confetti(last||won?null:from,last||won);success(cup?'trophy':won?'medal':last?'day':'task');
   if(won){announce('medal',task,day);bounce(cup?'.trophy':`[data-medal="${day}"]`);if(cup)setTimeout(()=>confetti(null,true),700);return toast(teamCheer(cup))}
   const after=streaks[m?.id]||0;
   if(act==='done'&&m?.id===me.id&&after>before)toast(cheer(after));else if(last)toast(m.id===me.id?'Journée bouclée, bravo ! 🎉':'Journée bouclée pour '+m.name+' 🎉')}
