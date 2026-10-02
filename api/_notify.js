@@ -12,6 +12,15 @@ export const person=(t,d)=>{const w=Math.floor((Date.parse(d)-Date.parse(t.start
 const quand=d=>{const j=today();return d===j?"aujourd'hui":d===addDays(j,1)?'demain':d===addDays(j,-1)?'hier':'le '+at(d).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'})};
 // Page ouverte au clic : l'application pour un compte, le lien personnel pour un profil géré.
 export const pageOf=m=>!m.account&&m.share?'/planning.html?token='+m.share:'/';
+// Séries 🔥 d'une famille, par membre (database/streaks.sql). Sans la migration, aucune série : rien ne casse.
+export async function streaksOf(db,home){try{return Object.fromEntries((await db('rpc/home_streaks','POST',{h:home})).map(r=>[r.member,r.streak]))}catch{return {}}}
+export const flame=n=>n>=2?` 🔥 ${n} jours d'affilée !`:'';
+// Vitrine de la famille : médailles et coupes gagnées (database/awards.sql). Sans la migration, une vitrine vide.
+export async function awardsOf(db,home){try{const [r]=await db('rpc/home_awards','POST',{h:home});return {medals:r?.medals||0,trophies:r?.trophies||0}}catch{return {medals:0,trophies:0}}}
+// Récompenses de groupe : la journée est complète quand toutes les tâches de la famille y sont déclarées faites.
+export const weekOf=d=>Array.from({length:7},(_,i)=>addDays(d,i+1-(at(d).getUTCDay()||7)));
+export function complete(tasks,marks,d){const due=tasks.filter(t=>occurs(t,d));return due.length>0&&due.every(t=>marks.some(c=>c.task===t.id&&c.day===d))}
+export const won=(tasks,marks,week)=>week.some(d=>tasks.some(t=>occurs(t,d)))&&week.every(d=>!tasks.some(t=>occurs(t,d))||complete(tasks,marks,d));
 
 export function notifier(env){
  const db=database(env);
@@ -59,7 +68,17 @@ export async function announce(env,kind,{actor,task,day}){
  if(kind==='approve'){
   if(actor.role!=='parent'||!c.approved||c.actor===actor.id)return 0;
   const m=family.find(x=>x.id===c.actor);
-  return m?deliver([m],()=>({title:'Tâche validée ✓',body:`${actor.name} a confirmé ${titre} ${quand(day)}. Bravo !`,tag:'approve-'+t.id+'-'+day}),'approve:'+t.id+':'+day):0;
+  const serie=m?(await streaksOf(db,actor.home))[m.id]:0;
+  return m?deliver([m],()=>({title:'Tâche validée ✓',body:`${actor.name} a confirmé ${titre} ${quand(day)}. Bravo !${flame(serie)}`,tag:'approve-'+t.id+'-'+day}),'approve:'+t.id+':'+day):0;
+ }
+// Médaille ou coupe tout juste gagnée : les autres membres l'apprennent, une seule fois par journée ou par semaine.
+ if(kind==='medal'){
+  const week=weekOf(day),all=await db('tasks?select=*&home=eq.'+actor.home);
+  const marks=await db('completions?select=task,day&day=gte.'+week[0]+'&day=lte.'+week[6]+'&task=in.('+all.map(x=>x.id).join(',')+')');
+  if(!complete(all,marks,day))return 0;
+  const others=family.filter(m=>m.id!==actor.id);
+  if(won(all,marks,week))return deliver(others,()=>({title:'🏆 Coupe de la semaine !',body:'Toute la famille a fait toutes ses tâches cette semaine. Bravo à tous !',tag:'trophy-'+week[0]}),'trophy:'+actor.home+':'+week[0]);
+  return deliver(others,()=>({title:'🏅 Médaille du jour',body:`Toute la famille a fait ses tâches ${quand(day)}. Bravo à tous !`,tag:'medal-'+day}),'medal:'+actor.home+':'+day);
  }
  return 0;
 }
