@@ -16,15 +16,17 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 - Validation par la personne assignée ou le parent ; confirmation parentale facultative.
 - Actualisation toutes les 30 secondes et au retour sur la page.
 - Installation PWA, abonnement Web Push par appareil, notification de test.
-- Récapitulatif quotidien des tâches du jour non déclarées terminées.
+- Notifications d'événements : tâche attribuée, tâche en attente de confirmation (aux parents), tâche confirmée (à l'enfant).
+- Récapitulatif quotidien des tâches du jour non déclarées terminées, et des confirmations en attente pour les parents.
+- Alerte en tête du planning tant que l'appareil ne reçoit pas les notifications.
 - Démonstration explicitement séparée des comptes réels.
 
 ## Déployer via un dépôt GitHub privé et Vercel
 
 1. Créer un dépôt privé personnel sur GitHub et y déposer le contenu de ce dossier (package.json doit être à la racine). Ne jamais envoyer node_modules, .env ou de clés privées.
-2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, database/share-link.sql pour le lien de partage, database/managed-profiles.sql pour les profils gérés, puis database/family-code.sql pour le code famille lisible, et enfin database/invitations.sql pour inviter un parent par e-mail. Chaque fichier se termine par une requête de contrôle dont toutes les lignes doivent afficher « en place ».
+2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, database/share-link.sql pour le lien de partage, database/managed-profiles.sql pour les profils gérés, puis database/family-code.sql pour le code famille lisible, database/invitations.sql pour inviter un parent par e-mail, et enfin database/notifications.sql pour les notifications d'événements. Chaque fichier se termine par une requête de contrôle dont toutes les lignes doivent afficher « en place ».
 3. Dans Supabase Authentication, activer les comptes e-mail/mot de passe. Pour une famille, le plus simple est de créer les utilisateurs depuis Authentication > Users > Add user, avec leur mot de passe et confirmation explicite. Cela évite de dépendre du serveur e-mail de démonstration Supabase, qui ne permet pas l'envoi à tous les destinataires. Pour laisser les utilisateurs s'inscrire depuis l'application et confirmer leur adresse, configurer un SMTP opérationnel. Ne pas désactiver la confirmation uniquement pour contourner cet obstacle.
-4. Sur votre PC, installer Node.js LTS, ouvrir ce dossier dans un terminal et exécuter `npm ci`, puis `npm run keys`. Conserver la paire VAPID ; ne pas la régénérer après activation des téléphones.
+4. Sur votre PC, installer Node.js LTS, ouvrir ce dossier dans un terminal et exécuter `npm ci`, puis `npm run keys`. Conserver la paire VAPID ; ne pas la régénérer après activation des téléphones. Une paire peut déjà se trouver dans .env.local, fichier local jamais versionné : la reprendre telle quelle plutôt qu'en produire une autre.
 5. Sur Vercel : Add New > Project > importer ce dépôt GitHub. Limiter l'installation GitHub Vercel au dépôt sélectionné. Framework Preset : Other ; Output Directory : public ; pas de commande de build nécessaire ; installation `npm ci`.
 6. Ajouter les variables suivantes dans Settings > Environment Variables, pour Production. Le fichier .env.example contient uniquement leurs noms.
 
@@ -129,6 +131,21 @@ Ce jeton reste un secret porté par l'adresse, avec ce que cela implique :
 
 Un parent renouvelle le lien à tout moment, ce qui rend l'ancien inutilisable sur-le-champ, ou désactive complètement le partage.
 
+## Les notifications
+
+Chaque appareil s'abonne séparément, depuis l'alerte du planning ou depuis « Famille & rappels ». Un enfant à profil géré s'abonne depuis son lien personnel : sur iPhone, il ajoute ce lien à l'écran d'accueil (un manifeste propre au lien, servi par /api/manifest, fait rouvrir son planning et non l'écran de connexion).
+
+| Événement | Qui est prévenu |
+| --- | --- |
+| Une tâche est créée ou réattribuée | La personne chargée de la prochaine occurrence, sauf si c'est le parent qui l'a créée |
+| Une tâche soumise à confirmation est déclarée faite | Les parents du foyer, sauf celui qui l'a cochée |
+| Un parent confirme une tâche | La personne qui l'avait déclarée faite |
+| Chaque soir | Chacun, s'il lui reste des tâches du jour ; les parents aussi s'il reste des confirmations des deux dernières semaines |
+
+L'application signale un événement à /api/push juste après l'avoir enregistré ; le serveur relit alors tout en base (foyer, rôle, état de la tâche) et ne croit le navigateur sur rien. Une validation faite depuis un lien personnel est annoncée directement par /api/planning. Chaque événement n'est annoncé qu'une fois par destinataire, grâce à la table push_events (clés effacées au bout de deux mois par le cron). Revers assumé : une tâche décochée puis recochée ne prévient pas une seconde fois.
+
+À chaque ouverture du planning, et à chaque retour sur la page, l'application contrôle l'appareil : autorisation du navigateur, abonnement en cours, inscription côté serveur pour ce profil. Si l'autorisation est accordée mais l'abonnement perdu (navigateur nettoyé, clés VAPID changées), il est rétabli sans rien demander. Sinon une alerte rouge s'affiche en tête du planning, avec un bouton d'activation quand c'est possible, ou la marche à suivre quand le navigateur a bloqué les notifications ou quand l'iPhone exige l'installation sur l'écran d'accueil. Si le serveur ne répond pas, aucune alerte n'est affichée plutôt qu'une fausse.
+
 ## Rappels et gratuité
 
 Le cron fourni se déclenche quotidiennement à 16 h UTC : à Paris, entre 18 h et 19 h en été et entre 17 h et 18 h en hiver. Vercel Hobby ne garantit pas une heure exacte. Il ne tourne que sur les déploiements de production. Un même utilisateur ne reçoit qu'un récapitulatif par jour, sur tous ses appareils inscrits. Une notification de test est limitée à une par minute. Aucun rappel n'est envoyé si toutes les tâches du jour ont été déclarées faites.
@@ -144,7 +161,7 @@ Sources :
 
 ## Contrôle avant ouverture à la famille
 
-Tester un profil géré et son lien personnel : création depuis un compte parent, ouverture du lien dans un navigateur sans session, validation d'une tâche, puis vérification qu'une tâche attribuée à quelqu'un d'autre reste hors d'atteinte. Tester le lien de partage du foyer dans un navigateur sans session : le planning doit s'afficher sans aucune action possible, puis le renouvellement depuis l'application doit rendre l'ancien lien inopérant. Tester la récupération par SMS sur un vrai mobile : enregistrement du numéro, demande de code, changement, reconnexion, puis rejeu du même code qui doit être refusé. Tester aussi la récupération par e-mail de bout en bout avec une vraie adresse : demande du lien, réception, choix du mot de passe, connexion, puis réutilisation du même lien qui doit être refusée. Tester deux comptes dans des navigateurs séparés : visibilité commune, validation d'une tâche assignée, refus d'une tâche d'autrui pour un enfant, refus de modification des séries pour un enfant. Tester aussi une deuxième famille : aucune donnée ne doit être accessible entre familles. Tester enfin les notifications Android et iPhone avec l'application fermée, puis vérifier le premier cron dans les journaux Vercel. Ces tests réels nécessitent les comptes et services connectés ; ils ne sont pas remplacés par la démonstration.
+Tester un profil géré et son lien personnel : création depuis un compte parent, ouverture du lien dans un navigateur sans session, validation d'une tâche, puis vérification qu'une tâche attribuée à quelqu'un d'autre reste hors d'atteinte. Tester le lien de partage du foyer dans un navigateur sans session : le planning doit s'afficher sans aucune action possible, puis le renouvellement depuis l'application doit rendre l'ancien lien inopérant. Tester la récupération par SMS sur un vrai mobile : enregistrement du numéro, demande de code, changement, reconnexion, puis rejeu du même code qui doit être refusé. Tester aussi la récupération par e-mail de bout en bout avec une vraie adresse : demande du lien, réception, choix du mot de passe, connexion, puis réutilisation du même lien qui doit être refusée. Tester deux comptes dans des navigateurs séparés : visibilité commune, validation d'une tâche assignée, refus d'une tâche d'autrui pour un enfant, refus de modification des séries pour un enfant. Tester aussi une deuxième famille : aucune donnée ne doit être accessible entre familles. Tester enfin les notifications Android et iPhone avec l'application fermée : création d'une tâche pour un enfant, validation d'une tâche à confirmer, confirmation par le parent, puis l'alerte du planning sur un appareil non abonné et après un refus d'autorisation. Vérifier le premier cron dans les journaux Vercel. Ces tests réels nécessitent les comptes et services connectés ; ils ne sont pas remplacés par la démonstration.
 
 Les tables utilisent la sécurité par ligne Supabase. Les fonctions d'écriture de validation vérifient l'appartenance au foyer et la personne assignée. Les clés service_role et VAPID_PRIVATE_KEY ne sont jamais exposées par /api/config. Les sessions sont conservées dans le stockage du navigateur : utiliser un téléphone personnel et se déconnecter des appareils partagés. L'installation des notifications rattache cet appareil au compte qui les active.
 
