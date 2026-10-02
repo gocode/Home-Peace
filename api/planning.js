@@ -1,5 +1,6 @@
 // Planning ouvert par un lien de partage : sans compte, sans réglages.
 // Un lien de foyer donne la semaine entière en lecture seule ; un lien de membre ne montre que ses tâches et le laisse les cocher.
+import {pushReady,announce} from './_notify.js';
 const iso=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(d);
 const at=s=>new Date(s+'T12:00:00Z');
 const add=(s,n)=>{const d=at(s);d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
@@ -28,6 +29,8 @@ export default async function handler(req,res){
    if(!uuid.test(String(task??''))||!jour.test(String(day??''))||!['done','undo'].includes(action))return res.status(400).json({error:'Requête invalide'});
    const state=await db('rpc/mark_task_as','POST',{actor_member:owner.id,task_id:task,task_day:day,action});
    if(state!=='ok')return res.status(400).json({error:{tache:'Cette tâche n’existe plus.',date:'Cette tâche n’est pas prévue ce jour-là.',futur:'Cette tâche est prévue plus tard.',autre:'Cette tâche est attribuée à quelqu’un d’autre.'}[state]||'Action impossible.'});
+   // Une tâche soumise à confirmation prévient les parents ; un échec d'envoi ne remet pas la validation en cause.
+   if(action==='done'&&pushReady(env))await announce(env,'done',{actor:owner,task,day}).catch(e=>console.error('notify failure',e.status||e.statusCode||'unknown'));
    return res.json({ok:true});
   }
 
