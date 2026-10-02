@@ -25,6 +25,10 @@ create or replace function public.is_parent() returns boolean language sql stabl
 grant execute on function public.my_member() to authenticated;
 
 -- 3. Création du profil du titulaire du compte.
+-- Sautée une fois family-code.sql passé : sa version la remplace, et la recréer ferait cohabiter deux enter_home.
+do $do$ begin
+ if exists(select 1 from information_schema.columns where table_schema='public' and table_name='homes' and column_name='invite') then
+  execute $f$
 create or replace function public.enter_home(display_name text, invitation uuid default null) returns void language plpgsql security definer set search_path=public as $$
 declare h uuid;
 begin
@@ -35,7 +39,9 @@ begin
  else select id into h from homes where invite=invitation; if h is null then raise exception 'Code famille invalide'; end if; end if;
  insert into members(home,name,role,color,account) values(h,display_name,case when invitation is null then 'parent' else 'enfant' end,
   (array['#4169e1','#ae368a','#087f73','#b35a09','#744ac7'])[1+floor(random()*5)::int],auth.uid());
-end $$;
+end $$$f$;
+ end if;
+end $do$;
 
 -- 4. Profils gérés par un parent : création, renommage, suppression.
 create or replace function public.create_member(display_name text) returns uuid language plpgsql security definer set search_path=public as $$
