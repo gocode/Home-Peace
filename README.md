@@ -21,7 +21,7 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 ## Déployer via un dépôt GitHub privé et Vercel
 
 1. Créer un dépôt privé personnel sur GitHub et y déposer le contenu de ce dossier (package.json doit être à la racine). Ne jamais envoyer node_modules, .env ou de clés privées.
-2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, database/share-link.sql pour le lien de partage, puis database/managed-profiles.sql pour les profils gérés.
+2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, database/share-link.sql pour le lien de partage, database/managed-profiles.sql pour les profils gérés, puis database/family-code.sql pour le code famille lisible.
 3. Dans Supabase Authentication, activer les comptes e-mail/mot de passe. Pour une famille, le plus simple est de créer les utilisateurs depuis Authentication > Users > Add user, avec leur mot de passe et confirmation explicite. Cela évite de dépendre du serveur e-mail de démonstration Supabase, qui ne permet pas l'envoi à tous les destinataires. Pour laisser les utilisateurs s'inscrire depuis l'application et confirmer leur adresse, configurer un SMTP opérationnel. Ne pas désactiver la confirmation uniquement pour contourner cet obstacle.
 4. Sur votre PC, installer Node.js LTS, ouvrir ce dossier dans un terminal et exécuter `npm ci`, puis `npm run keys`. Conserver la paire VAPID ; ne pas la régénérer après activation des téléphones.
 5. Sur Vercel : Add New > Project > importer ce dépôt GitHub. Limiter l'installation GitHub Vercel au dépôt sélectionné. Framework Preset : Other ; Output Directory : public ; pas de commande de build nécessaire ; installation `npm ci`.
@@ -72,6 +72,12 @@ Depuis l'écran de connexion, « Mot de passe oublié ? » demande à Supabase l
 Ce parcours dépend entièrement de l'envoi d'e-mails du projet Supabase. Le serveur de démonstration Supabase n'écrit qu'à quelques adresses et limite fortement le débit : sans SMTP opérationnel configuré (Authentication > Emails), la famille ne recevra rien. Supabase limite aussi le nombre de demandes par adresse ; l'application affiche alors le délai d'attente renvoyé par le service.
 
 La réponse est volontairement identique qu'un compte existe ou non à cette adresse, pour ne pas révéler qui possède un compte. Le changement de mot de passe depuis Famille & rappels s'adresse aux personnes déjà connectées et ne nécessite pas d'e-mail.
+
+## Le code famille
+
+Le code qui permet de rejoindre un foyer compte huit caractères, par exemple 7KQ4-2WRM, affichés par groupes de quatre dans « Famille & rappels ». Son alphabet exclut I, L, O et U : aucune confusion possible entre un 1 et un I, ou un 0 et un O. La saisie est indulgente — minuscules, espaces et tirets sont acceptés, et les sosies de caractères sont ramenés au bon, aussi bien dans le navigateur que dans la fonction SQL.
+
+Un parent le renouvelle depuis les mêmes réglages, ce qui rend l ancien inutilisable sur-le-champ. Avant cette évolution, ce code était un identifiant UUID de 36 caractères : impossible à noter, et une saisie approximative renvoyait une erreur de base de données incompréhensible.
 
 ## Les profils de la famille
 
