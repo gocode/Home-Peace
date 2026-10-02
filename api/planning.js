@@ -38,7 +38,7 @@ export default async function handler(req,res){
   if(!jour.test(asked)||Number.isNaN(Date.parse(asked))||Math.abs(Date.parse(asked)-Date.parse(today))>400*86400000)asked=today;
   const start=add(asked,1-weekday(asked)),days=Array.from({length:7},(_,i)=>add(start,i));
   const [members,tasks,done,[maison]]=await Promise.all([
-   db('members?select=id,name,color&home=eq.'+foyer),
+   db('members?select=*&home=eq.'+foyer),
    db('tasks?select=*&home=eq.'+foyer),
    db('completions?select=task,day,approved&day=gte.'+start+'&day=lte.'+days[6]),
    home?[home]:db('homes?select=name&id=eq.'+foyer)]);
@@ -48,7 +48,7 @@ export default async function handler(req,res){
   const marks=done.filter(c=>ours.has(c.task));
   res.json({home:maison?.name??'',today,start,
    who:owner?owner.name:null,color:owner?owner.color:null,
-   people:owner?[{name:owner.name,color:owner.color}]:members.map(m=>({name:m.name,color:m.color})),
+   people:owner?[{name:owner.name,color:owner.color}]:members.filter(m=>m.assignable!==false||tasks.some(t=>t.people.includes(m.id))).map(m=>({name:m.name,color:m.color})),
    days:days.map(d=>({day:d,tasks:tasks.filter(t=>occurs(t,d)&&(!owner||person(t,d)?.id===owner.id)).map(t=>{const m=person(t,d),c=marks.find(c=>c.task===t.id&&c.day===d);
     // L'identifiant de tâche n'est livré qu'au titulaire du lien, qui a justement le droit d'agir dessus.
     return {...(owner?{id:t.id}:{}),title:t.title,who:m?.name??null,color:m?.color??null,rotating:!!t.rotating,

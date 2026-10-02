@@ -3,7 +3,7 @@
 import pg from 'pg';
 import {readFileSync,readdirSync} from 'node:fs';
 
-const order=['sms-recovery.sql','share-link.sql','managed-profiles.sql','family-code.sql','invitations.sql','notifications.sql','task-memory.sql'];
+const order=['sms-recovery.sql','share-link.sql','managed-profiles.sql','family-code.sql','invitations.sql','notifications.sql','task-memory.sql','member-settings.sql'];
 const dir=new URL('../database/',import.meta.url);
 const unknown=readdirSync(dir).filter(f=>f.endsWith('.sql')&&f!=='setup.sql'&&!order.includes(f));
 if(unknown.length)console.warn('Non appliqués, ordre inconnu : '+unknown.join(', ')+'. Les ajouter à la liste de scripts/migrate.js.');

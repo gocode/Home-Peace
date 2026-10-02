@@ -6,6 +6,8 @@ const iso=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(d
 const date=s=>new Date(s+'T12:00:00');
 const add=(s,n)=>{const d=date(s);d.setDate(d.getDate()+n);return iso(d)};
 const color=c=>/^#[0-9a-f]{6}$/i.test(c)?c:'#4169e1';
+// Initiale lisible sur toute couleur choisie : sombre sur les teintes claires, blanche sinon.
+const ink=c=>{const n=parseInt(color(c).slice(1),16);return (.299*(n>>16)+.587*(n>>8&255)+.114*(n&255))/255>.62?'#192640':'#fff'};
 const label={attente:'À confirmer',retard:'En retard'};
 const fmt=(d,o)=>date(d).toLocaleDateString('fr-FR',o);
 const long=d=>fmt(d,{weekday:'long',day:'numeric',month:'long'});
@@ -30,7 +32,7 @@ async function mark(b){b.disabled=true;
  try{const r=await fetch('/api/planning?token='+encodeURIComponent(token),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task:b.dataset.task,day:b.dataset.day,action:b.dataset.do})});
   const d=await r.json().catch(()=>null);if(!r.ok)throw Error(d?.error||'Action impossible.');await load(vue.start)}
  catch(e){toast(e.message);b.disabled=false}}
-function person(name,c){return `<span class="person" style="--person:${color(c)}"><span class="avatar">${esc((name||'?').slice(0,1))}</span>${esc(name||'Membre absent')}</span>`}
+function person(name,c){return `<span class="person" style="--person:${color(c)};--on:${ink(c)}"><span class="avatar">${esc((name||'?').slice(0,1))}</span>${esc(name||'Membre absent')}</span>`}
 function dayHtml(x,today,single){return `<article class="day ${x.day===today?'today':''}"><div class="dayhead">${single?`<h2>${long(x.day)}</h2>`:`<span class="dlink">${fmt(x.day,{weekday:'short',day:'numeric'})}</span>`}</div>${x.tasks.map(t=>taskHtml(t,x.day)).join('')||'<div class="empty">Rien de prévu.</div>'}</article>`}
 function taskHtml(t,day){const state={fait:'done',attente:'pending',retard:'late'}[t.state]||'',open=t.state==='prevu'||t.state==='retard',glyph=icon(t.state==='attente'?'clock':'check');
  const check=t.mine&&t.id?`<button type="button" class="check" data-do="${open?'done':'undo'}" data-task="${esc(t.id)}" data-day="${day}" aria-pressed="${!open}" aria-label="${esc(t.title)} : ${open?"c'est fait":'annuler'}" title="${open?"C'est fait":'Annuler'}">${glyph}</button>`:`<span class="check" role="img" aria-label="${t.state==='fait'?'Terminé':t.state==='attente'?'À confirmer':'À faire'}">${state==='done'||state==='pending'?glyph:''}</span>`;
