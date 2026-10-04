@@ -51,7 +51,7 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 | ALLMYSMS_FROM | Nom d expéditeur affiché, 11 caractères au plus, déclaré auprès d AllMySMS |
 | CRON_SECRET | Secret aléatoire long, par exemple produit avec `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 
-7. Déployer. Reporter l'URL HTTPS finale dans Supabase Authentication > URL Configuration > Site URL. Ajouter cette même URL dans Redirect URLs : la récupération de mot de passe y renvoie l'utilisateur. Si l'inscription par e-mail est utilisée, faire de même pour ses redirections.
+7. Déployer. Reporter l'URL HTTPS finale dans Supabase Authentication > URL Configuration > Site URL, par exemple `https://home-peace-dun.vercel.app`. Tant qu'elle reste sur `http://localhost:3000`, valeur par défaut, tous les liens envoyés par e-mail (invitation, confirmation d'inscription, mot de passe oublié) y renvoient : Supabase ignore l'adresse de retour demandée par l'application si elle n'est pas autorisée. Pour toute autre adresse (prévisualisations Vercel, domaine personnalisé), l'ajouter dans Redirect URLs sous la forme `https://adresse/**` : une entrée sans `/**` n'accepte pas la barre finale que l'application transmet.
 8. Le premier parent se connecte puis crée son profil sans code famille. Il retrouve le code dans Famille & rappels. Les autres se connectent avec leurs comptes respectifs et ce code.
 9. Pour un deuxième parent, l'inviter par e-mail depuis Famille & rappels (voir « Inviter un parent » plus bas). Les enfants ne peuvent pas changer leur rôle via l'application.
 10. Installer sur chaque téléphone, activer les notifications et envoyer un test. Sur iPhone : iOS 16.4 minimum, Safari > Partager > Sur l'écran d'accueil, puis ouvrir l'application installée. Sur Android : utiliser un navigateur prenant en charge Web Push.
@@ -100,7 +100,7 @@ Dans « Famille & rappels », un parent saisit le prénom et l'adresse e-mail de
 - Dix envois par foyer et par jour au plus, et pas deux envois à la même adresse dans la même minute.
 - Un compte qui a déjà un profil dans une autre famille ne peut pas en rejoindre une seconde.
 
-Prérequis : un SMTP opérationnel dans Supabase (Authentication > Emails), comme pour l'inscription, et l'URL du site dans Authentication > URL Configuration > Redirect URLs. Le modèle d'e-mail « Invite user » se personnalise au même endroit.
+Prérequis : un SMTP opérationnel dans Supabase (Authentication > Emails), comme pour l'inscription, et l'URL du site dans Authentication > URL Configuration > Site URL (voir l'étape 7 de l'installation), faute de quoi le lien de l'e-mail mène à `localhost:3000`. Le modèle d'e-mail « Invite user » se personnalise au même endroit.
 
 Si l'ajout d'un enfant ou l'invitation affiche « La base de données n'est pas à jour », exécuter le fichier SQL indiqué dans le message : c'est le signe que la migration correspondante n'a pas été passée.
 
