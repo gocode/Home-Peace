@@ -17,7 +17,7 @@ const ib=(name,text,attrs='')=>`<button type="button" class="icon" aria-label="$
 // Sur téléphone : bandeau des sept jours et une seule journée affichée, celle qu'on touche.
 const narrow=matchMedia('(max-width:650px)');
 const token=new URLSearchParams(location.search).get('token')||'';
-let vue=null, timer, alerte='inconnu', vapid, jour;
+let vue=null, timer, alerte='inconnu', vapid, jour, loads=0;
 narrow.addEventListener('change',()=>{if(vue)render(vue)});
 // Notifications d'un lien personnel : le jeton du lien tient lieu de compte. Un lien de foyer, lui, n'appartient à personne.
 async function request(action,body){const r=await fetch('/api/push?action='+action+'&token='+encodeURIComponent(token),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Envoi impossible.');return d}
@@ -27,9 +27,14 @@ async function checkPush(){if(!vue?.who)return;
 async function enablePush(){try{alerte=await enableDevice(vapid,request);render(vue);toast(alerte==='ok'?'Notifications activées : tu seras prévenu des tâches qui t’attendent.':'Autorisation enregistrée : les rappels arriveront dès que le serveur sera prêt.')}catch(e){toast(e.message);checkPush()}}
 function toast(s){$('#toast').textContent=s;$('#toast').style.display='block';clearTimeout(timer);timer=setTimeout(()=>$('#toast').style.display='none',5000)}
 function fail(title,detail,hint){app.innerHTML=`<section class="auth panel"><h1>${esc(title)}</h1><p>${esc(detail)}</p><p class="muted">${esc(hint)}</p></section>`}
-async function load(week){
- try{const r=await fetch('/api/planning?token='+encodeURIComponent(token)+(week?'&week='+week:''));const d=await r.json().catch(()=>null);if(!r.ok)throw Error(d?.error||'Planning indisponible.');const first=!vue;vue=d;render(d);if(first)checkPush()}
- catch(e){fail('Planning indisponible',e.message,'Ce lien a pu être renouvelé ou désactivé par la famille. Demande-leur le lien à jour.')}}
+// quiet : relecture de fond, qui garde l'affichage en place si le réseau flanche.
+async function load(week,quiet){const n=++loads;
+ try{const r=await fetch('/api/planning?token='+encodeURIComponent(token)+(week?'&week='+week:''));const d=await r.json().catch(()=>null);if(n!==loads)return;if(!r.ok)throw Error(d?.error||'Planning indisponible.');const first=!vue;vue=d;render(d);if(first)checkPush()}
+ catch(e){if(quiet&&vue&&n===loads&&!/lien/i.test(e.message))return;if(n!==loads)return;fail('Planning indisponible',e.message,'Ce lien a pu être renouvelé ou désactivé par la famille. Demande-leur le lien à jour.')}}
+// Relecture de fond : les tâches tout juste attribuées à l'enfant sont signalées à l'écran.
+const mine=d=>new Set(d.days.flatMap(x=>x.tasks.filter(t=>t.mine&&t.id).map(t=>t.id)));
+async function refresh(){const before=mine(vue),week=vue.start;await load(week,true);if(!vue?.who||vue.start!==week)return;const added=[...mine(vue)].filter(id=>!before.has(id));
+ if(added.length){const t=vue.days.flatMap(x=>x.tasks).find(t=>t.id===added[0]);toast(added.length>1?added.length+' nouvelles tâches pour toi.':'Nouvelle tâche pour toi : « '+t.title+' ».')}}
 // Cocher se fête : petite gerbe, ou grande pluie quand c'était la dernière tâche du jour.
 async function mark(b){b.disabled=true;unlock();const {task,day}=b.dataset,act=b.dataset.do,from=b.getBoundingClientRect(),before=vue.streak||0,hadMedal=!!vue.days.find(x=>x.day===day)?.medal,hadCup=!!vue.trophy;
  const last=act==='done'&&vue.days.find(x=>x.day===day)?.tasks.every(t=>t.id===task||t.state==='fait'||t.state==='attente');
@@ -60,5 +65,7 @@ else{
  const m=document.createElement('link');m.rel='manifest';m.href='/api/manifest?token='+encodeURIComponent(token);document.head.append(m);
  if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
  load();
- document.addEventListener('visibilitychange',()=>{if(!document.hidden&&vue)checkPush()});
+ // Sans compte, pas de canal en direct : le planning se relit toutes les 20 secondes tant qu'il est affiché, et au retour sur la page.
+ setInterval(()=>{if(!document.hidden&&vue)refresh()},20000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&vue){refresh();checkPush()}});
 }

@@ -17,7 +17,7 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 - Création, modification et suppression de séries de tâches par le parent.
 - Récurrence par jours de semaine et rotation hebdomadaire entre tous les membres.
 - Validation par la personne assignée ou le parent ; confirmation parentale facultative.
-- Actualisation toutes les 30 secondes et au retour sur la page.
+- Mises à jour en direct : une tâche ajoutée, modifiée, cochée ou supprimée apparaît aussitôt sur tous les écrans ouverts, sans recharger la page (Supabase Realtime, database/realtime.sql). Une tâche tout juste attribuée à la personne connectée est en plus signalée à l'écran. Le lien personnel d'un enfant, sans compte, se relit toutes les 20 secondes.
 - Installation PWA, abonnement Web Push par appareil, notification de test.
 - Notifications d'événements : tâche attribuée, tâche en attente de confirmation (aux parents), tâche confirmée (à l'enfant).
 - Récapitulatif quotidien des tâches du jour non déclarées terminées, et des confirmations en attente pour les parents.
@@ -32,7 +32,7 @@ Application familiale mobile pour Android et iPhone. Première version à connec
 ## Déployer via un dépôt GitHub privé et Vercel
 
 1. Créer un dépôt privé personnel sur GitHub et y déposer le contenu de ce dossier (package.json doit être à la racine). Ne jamais envoyer node_modules, .env ou de clés privées.
-2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, database/share-link.sql pour le lien de partage, database/managed-profiles.sql pour les profils gérés, puis database/family-code.sql pour le code famille lisible, database/invitations.sql pour inviter un parent par e-mail, database/notifications.sql pour les notifications d'événements, database/task-memory.sql pour la mémoire des tâches, database/member-settings.sql pour la couleur des avatars et le choix des membres qui reçoivent des tâches, database/streaks.sql pour les séries 🔥, et enfin database/awards.sql pour les médailles et coupes de la famille. Chaque fichier se termine par une requête de contrôle dont toutes les lignes doivent afficher « en place ».
+2. Créer un projet Supabase Free, de préférence dans une région européenne. Exécuter database/setup.sql une seule fois dans SQL Editor, puis database/sms-recovery.sql si la récupération par SMS est souhaitée, database/share-link.sql pour le lien de partage, database/managed-profiles.sql pour les profils gérés, puis database/family-code.sql pour le code famille lisible, database/invitations.sql pour inviter un parent par e-mail, database/notifications.sql pour les notifications d'événements, database/task-memory.sql pour la mémoire des tâches, database/member-settings.sql pour la couleur des avatars et le choix des membres qui reçoivent des tâches, database/streaks.sql pour les séries 🔥, database/awards.sql pour les médailles et coupes de la famille, et enfin database/realtime.sql pour les mises à jour en direct. Chaque fichier se termine par une requête de contrôle dont toutes les lignes doivent afficher « en place ».
 3. Dans Supabase Authentication, activer les comptes e-mail/mot de passe. Pour une famille, le plus simple est de créer les utilisateurs depuis Authentication > Users > Add user, avec leur mot de passe et confirmation explicite. Cela évite de dépendre du serveur e-mail de démonstration Supabase, qui ne permet pas l'envoi à tous les destinataires. Pour laisser les utilisateurs s'inscrire depuis l'application et confirmer leur adresse, configurer un SMTP opérationnel. Ne pas désactiver la confirmation uniquement pour contourner cet obstacle.
 4. Sur votre PC, installer Node.js LTS, ouvrir ce dossier dans un terminal et exécuter `npm ci`, puis `npm run keys`. Conserver la paire VAPID ; ne pas la régénérer après activation des téléphones. Une paire peut déjà se trouver dans .env.local, fichier local jamais versionné : la reprendre telle quelle plutôt qu'en produire une autre.
 5. Sur Vercel : Add New > Project > importer ce dépôt GitHub. Limiter l'installation GitHub Vercel au dépôt sélectionné. Framework Preset : Other ; Output Directory : public ; pas de commande de build nécessaire ; installation `npm ci`.
@@ -145,7 +145,7 @@ Chaque appareil s'abonne séparément, depuis l'alerte du planning ou depuis « 
 
 | Événement | Qui est prévenu |
 | --- | --- |
-| Une tâche est créée ou réattribuée | La personne chargée de la prochaine occurrence, sauf si c'est le parent qui l'a créée |
+| Une tâche est créée ou réattribuée | Chaque personne qui la reçoit, avec la date de sa première occurrence ; à tour de rôle, tous les membres de la rotation, avec leur premier tour. Sauf le parent qui l'a créée |
 | Une tâche soumise à confirmation est déclarée faite | Les parents du foyer, sauf celui qui l'a cochée |
 | Un parent confirme une tâche | La personne qui l'avait déclarée faite |
 | Chaque soir | Chacun, s'il lui reste des tâches du jour ; les parents aussi s'il reste des confirmations des deux dernières semaines |
@@ -153,6 +153,15 @@ Chaque appareil s'abonne séparément, depuis l'alerte du planning ou depuis « 
 L'application signale un événement à /api/push juste après l'avoir enregistré ; le serveur relit alors tout en base (foyer, rôle, état de la tâche) et ne croit le navigateur sur rien. Une validation faite depuis un lien personnel est annoncée directement par /api/planning. Chaque événement n'est annoncé qu'une fois par destinataire, grâce à la table push_events (clés effacées au bout de deux mois par le cron). Revers assumé : une tâche décochée puis recochée ne prévient pas une seconde fois.
 
 À chaque ouverture du planning, et à chaque retour sur la page, l'application contrôle l'appareil : autorisation du navigateur, abonnement en cours, inscription côté serveur pour ce profil. Si l'autorisation est accordée mais l'abonnement perdu (navigateur nettoyé, clés VAPID changées), il est rétabli sans rien demander. Sinon une alerte rouge s'affiche en tête du planning, avec un bouton d'activation quand c'est possible, ou la marche à suivre quand le navigateur a bloqué les notifications ou quand l'iPhone exige l'installation sur l'écran d'accueil. Si le serveur ne répond pas, aucune alerte n'est affichée plutôt qu'une fausse.
+
+## Mises à jour en direct
+
+L'application ouvre une connexion WebSocket vers Supabase Realtime (public/live.js, sans bibliothèque) et s'abonne aux changements des tables tasks, completions et members. À chaque changement, le planning est relu ; plusieurs changements rapprochés ne déclenchent qu'une relecture. Une modale ouverte ou une page en arrière-plan diffèrent la relecture à leur fermeture ou au retour.
+
+- Chaque écran ne reçoit que ce que la sécurité par ligne lui permet de lire : un foyer n'apprend rien des autres. Les suppressions font exception côté Supabase, mais elles ne portent que l'identifiant de la ligne, et l'application ignore celles qui ne concernent pas son foyer.
+- Le jeton de session est renouvelé sur la connexion bien avant son expiration. En cas de coupure (réseau, téléphone en veille), la connexion se rétablit seule et le planning est relu pour rattraper ce qui a pu passer.
+- Tant que la connexion n'est pas établie, l'ancien rafraîchissement toutes les 30 secondes prend le relais. Si database/realtime.sql n'a pas été exécuté, la console du navigateur l'indique (« Mises à jour en direct indisponibles ») et l'application continue en mode rafraîchissement.
+- Le lien personnel d'un enfant et le lien de partage n'ont pas de compte, donc pas de canal en direct : ils se relisent toutes les 20 secondes tant que la page est affichée, et au retour sur la page.
 
 ## Rappels et gratuité
 

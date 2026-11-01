@@ -51,12 +51,11 @@ export async function announce(env,kind,{actor,task,day}){
  const family=await db('members?select=id,name,role,account,share&home=eq.'+actor.home),titre=`« ${t.title} »`;
  if(kind==='task'){
   if(actor.role!=='parent')return 0;
-  // La personne prévenue est celle de la prochaine occurrence, cherchée sur deux mois.
-  let d=t.starts>today()?t.starts:today();
-  for(let i=0;i<62&&!occurs(t,d);i++)d=addDays(d,1);
-  const m=occurs(t,d)&&family.find(x=>x.id===person(t,d));
-  if(!m||m.id===actor.id)return 0;
-  return deliver([m],()=>({title:'Nouvelle tâche pour toi',body:`${titre}, à faire ${quand(d)}${t.rotating?', puis à tour de rôle':''}.`,tag:'task-'+t.id}),'task:'+t.id);
+  // Chaque personne de la tâche apprend sa première occurrence, cherchée sur deux mois : à tour de rôle, toutes sont prévenues, pas seulement la première.
+  const first=new Map();
+  for(let d=t.starts>today()?t.starts:today(),i=0;i<62&&first.size<t.people.length;i++,d=addDays(d,1))if(occurs(t,d)&&!first.has(person(t,d)))first.set(person(t,d),d);
+  const targets=family.filter(m=>first.has(m.id)&&m.id!==actor.id);
+  return deliver(targets,m=>({title:'Nouvelle tâche pour toi',body:t.rotating?`${titre}, à tour de rôle : ton premier tour est ${quand(first.get(m.id))}.`:`${titre}, à faire ${quand(first.get(m.id))}.`,tag:'task-'+t.id}),'task:'+t.id);
  }
  if(!jour.test(String(day??'')))return 0;
  const [c]=await db('completions?select=*&task=eq.'+t.id+'&day=eq.'+day);
