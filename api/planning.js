@@ -39,7 +39,7 @@ export default async function handler(req,res){
   const start=add(asked,1-weekday(asked)),days=Array.from({length:7},(_,i)=>add(start,i));
   const [members,tasks,done,[maison],series,vitrine]=await Promise.all([
    db('members?select=*&home=eq.'+foyer),
-   db('tasks?select=*&home=eq.'+foyer),
+   db('tasks?select=*&home=eq.'+foyer+'&starts=lte.'+days[6]+'&or=(ends.is.null,ends.gte.'+start+')'),
    db('completions?select=task,day,approved&day=gte.'+start+'&day=lte.'+days[6]),
    home?[home]:db('homes?select=name&id=eq.'+foyer),
    streaksOf(db,foyer),awardsOf(db,foyer)]);

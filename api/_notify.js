@@ -72,7 +72,7 @@ export async function announce(env,kind,{actor,task,day}){
  }
 // Médaille ou coupe tout juste gagnée : les autres membres l'apprennent, une seule fois par journée ou par semaine.
  if(kind==='medal'){
-  const week=weekOf(day),all=await db('tasks?select=*&home=eq.'+actor.home);
+  const week=weekOf(day),all=await db('tasks?select=*&home=eq.'+actor.home+'&starts=lte.'+week[6]+'&or=(ends.is.null,ends.gte.'+week[0]+')');
   const marks=await db('completions?select=task,day&day=gte.'+week[0]+'&day=lte.'+week[6]+'&task=in.('+all.map(x=>x.id).join(',')+')');
   if(!complete(all,marks,day))return 0;
   const others=family.filter(m=>m.id!==actor.id);

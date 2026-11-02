@@ -218,6 +218,8 @@ dialog::backdrop{background:#12223b80}
 
 /* Messages */
 #toast{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);padding:12px 20px;border-radius:12px;background:#192640;color:#fff;display:none;z-index:30;width:max-content;max-width:min(560px,calc(100vw - 32px));text-align:center;box-shadow:0 8px 24px #0003}
+#toast button{margin-left:14px;min-height:34px;padding:4px 14px;background:transparent;color:#fff;border-color:#fff8;font-weight:600;vertical-align:middle}
+#toast button:not(:disabled):hover{background:#ffffff1f}
 .alert{background:#fdecee;border:1px solid #eab3bc;border-left:4px solid var(--bad);border-radius:14px;padding:12px 16px;margin:0 0 16px;color:#5c0f1c}
 .alert strong{display:block;font-size:16px;color:#8c1328}
 .alert p{margin:4px 0 10px;font-size:14px}

@@ -11,7 +11,8 @@ export default async function handler(req,res){
  if(action==='daily'){
   if(req.method!=='GET')return res.status(405).end();
   if(!env.CRON_SECRET||!equal(req.headers.authorization,'Bearer '+env.CRON_SECRET))return res.status(401).json({error:'Non autorisé'});
-  const today=now(),[members,tasks,done,waiting,subs]=await Promise.all(['members?select=*','tasks?select=*','completions?day=eq.'+today,'completions?select=task&approved=eq.false&day=gte.'+addDays(today,-14),'push_subscriptions?select=*'].map(p=>db(p)));
+  // Tâches de la période utile seulement : Supabase coupe toute réponse à 1000 lignes, l'historique complet finirait par écarter les récentes.
+  const today=now(),[members,tasks,done,waiting,subs]=await Promise.all(['members?select=*','tasks?select=*&starts=lte.'+today+'&or=(ends.is.null,ends.gte.'+addDays(today,-14)+')','completions?day=eq.'+today,'completions?select=task&approved=eq.false&day=gte.'+addDays(today,-14),'push_subscriptions?select=*'].map(p=>db(p)));
   let delivered=0,failed=0;
   // Séries 🔥, lues une fois par famille.
   const series=new Map(),streak=async m=>{if(!series.has(m.home))series.set(m.home,await streaksOf(db,m.home));return series.get(m.home)[m.id]||0};
